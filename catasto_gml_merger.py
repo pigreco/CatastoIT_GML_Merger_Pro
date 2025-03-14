@@ -251,13 +251,6 @@ class catasto_gml_merger:
                 inputs['ple_output'] = ple_output
                 print(inputs['ple_output'])
 
-            if self.dlg.cb_delete_temp.isChecked():
-                inputs['delete_temp'] =  'Sì'
-            else:
-                return None
-
-            print(inputs['delete_temp'])
-
             if self.dlg.cb_load_layers.isChecked():
                 inputs['load_layers'] =  'Sì'
             else:
