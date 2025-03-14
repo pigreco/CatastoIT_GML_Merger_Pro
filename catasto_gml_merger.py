@@ -285,7 +285,6 @@ class catasto_gml_merger:
                 processing.run("native:mergevectorlayers", merge_params)
 
                 # Chiudi tutti i layer che potrebbero utilizzare il file temporaneo
-
                 project = QgsProject.instance()
                 for layer in project.mapLayers().values():
                     if layer.source() == temp_merge:
@@ -302,7 +301,72 @@ class catasto_gml_merger:
                 log_message(f"Filtro attributi per {file_type}...")
                 result = processing.run("native:retainfields", filter_params)
 
-                if inputs["load_layers"]:
+                # Aggiungi campo foglio per MAP
+                if file_type == "MAP":
+                    log_message(f"Aggiunta campo foglio per {file_type}...")
+                    # Carica il layer
+                    layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
+                    
+                    # Aggiungi campo foglio
+                    provider = layer.dataProvider()
+                    provider.addAttributes([QgsField("foglio", QVariant.String)])
+                    layer.updateFields()
+                    
+                    # Popola il campo foglio estraendo il numero dopo l'ultimo underscore
+                    layer.startEditing()
+                    for feature in layer.getFeatures():
+                        gml_id = feature["gml_id"]
+                        if gml_id and "_" in gml_id:
+                            foglio = gml_id.split("_")[-1]
+                            feature["foglio"] = foglio
+                            layer.updateFeature(feature)
+                    layer.commitChanges()
+                    log_message(f"Campo foglio aggiunto e popolato per {file_type}")
+                    
+                    # Salva le modifiche
+                    provider.truncate()
+                    data_provider = layer.dataProvider()
+                    for feature in layer.getFeatures():
+                        data_provider.addFeatures([feature])
+                        
+                # Aggiungi campi foglio e particella per PLE
+                elif file_type == "PLE":
+                    log_message(f"Aggiunta campi foglio e particella per {file_type}...")
+                    # Carica il layer
+                    layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
+                    
+                    # Aggiungi campi foglio e particella
+                    provider = layer.dataProvider()
+                    provider.addAttributes([
+                        QgsField("foglio", QVariant.String),
+                        QgsField("particella", QVariant.String)
+                    ])
+                    layer.updateFields()
+                    
+                    # Popola i campi foglio e particella
+                    layer.startEditing()
+                    for feature in layer.getFeatures():
+                        gml_id = feature["gml_id"]
+                        if gml_id and "_" in gml_id and "." in gml_id:
+                            # Per il foglio: estrai le cifre tra l'ultimo _ e il punto
+                            parts = gml_id.split("_")
+                            last_part = parts[-1]
+                            if "." in last_part:
+                                foglio = last_part.split(".")[0]
+                                particella = last_part.split(".")[1]
+                                feature["foglio"] = foglio
+                                feature["particella"] = particella
+                                layer.updateFeature(feature)
+                    layer.commitChanges()
+                    log_message(f"Campi foglio e particella aggiunti e popolati per {file_type}")
+                    
+                    # Salva le modifiche
+                    provider.truncate()
+                    data_provider = layer.dataProvider()
+                    for feature in layer.getFeatures():
+                        data_provider.addFeatures([feature])
+
+                if inputs["load_layers"] == "Sì":
                     merged_layer = QgsVectorLayer(
                         output_file, f"{file_type}_Uniti", "ogr"
                     )
