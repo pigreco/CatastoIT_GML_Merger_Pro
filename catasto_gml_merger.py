@@ -299,6 +299,17 @@ class catasto_gml_merger:
                 gc.collect()
                 time.sleep(0.5)
 
+                # Gestione speciale per shapefile: assicurarsi che il percorso di output non abbia estensione
+                # il processing algorithm aggiungerà automaticamente .shp
+                if inputs['output_extension'] == '.shp':
+                    if output_file.lower().endswith('.shp'):
+                        output_file = output_file[:-4]  # Rimuovi l'estensione .shp
+                    
+                    # Assicurati che la directory esista
+                    output_dir = os.path.dirname(output_file)
+                    if not os.path.exists(output_dir):
+                        os.makedirs(output_dir, exist_ok=True)
+
                 filter_params = {
                     "INPUT": temp_merge,
                     "FIELDS": ["fid", "gml_id", "ADMINISTRATIVEUNIT"],
@@ -307,6 +318,10 @@ class catasto_gml_merger:
 
                 log_message(f"Filtro attributi per {file_type}...")
                 result = processing.run("native:retainfields", filter_params)
+                
+                # Aggiorna il percorso di output per i successivi riferimenti
+                # Nel caso degli shapefile, result['OUTPUT'] conterrà il percorso corretto con estensione
+                output_file = result['OUTPUT']
 
                 # Ottimizzazione della generazione dei campi utilizzando operazioni in batch
                 log_message(f"Aggiunta campo 'foglio' al layer {file_type}...")
