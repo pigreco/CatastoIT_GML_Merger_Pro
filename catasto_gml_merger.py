@@ -21,10 +21,10 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
-from qgis.core import Qgis, QgsVectorLayer, QgsProject, QgsMessageLog
+from qgis.core import Qgis, QgsVectorLayer, QgsProject, QgsMessageLog, QgsField
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -271,9 +271,10 @@ class catasto_gml_merger:
             ]
 
             if source_files:
-                temp_merge = os.path.join(
-                    os.path.dirname(source_folder), f"temp_merge_{file_type}.gpkg"
-                )
+                # Usa una directory temporanea specifica per evitare conflitti
+                temp_dir = os.path.join(os.path.dirname(source_folder), "temp_processing")
+                os.makedirs(temp_dir, exist_ok=True)
+                temp_merge = os.path.join(temp_dir, f"temp_merge_{file_type}_{int(time.time())}.gpkg")
 
                 merge_params = {
                     "LAYERS": source_files,
@@ -284,13 +285,19 @@ class catasto_gml_merger:
                 log_message(f"Unione file {file_type}...")
                 processing.run("native:mergevectorlayers", merge_params)
 
-                # Chiudi tutti i layer che potrebbero utilizzare il file temporaneo
+                # Chiudi esplicitamente i riferimenti ai layer che potrebbero utilizzare il file temporaneo
                 project = QgsProject.instance()
-                for layer in project.mapLayers().values():
-                    if layer.source() == temp_merge:
-                        layer.setValid(False)
+                layers_to_remove = []
+                for layer_id, layer in project.mapLayers().items():
+                    if temp_merge in layer.source():
+                        layers_to_remove.append(layer_id)
+                
+                for layer_id in layers_to_remove:
+                    project.removeMapLayer(layer_id)
+                
+                # Forza il garbage collection
                 gc.collect()
-                time.sleep(1)
+                time.sleep(0.5)
 
                 filter_params = {
                     "INPUT": temp_merge,
@@ -301,78 +308,100 @@ class catasto_gml_merger:
                 log_message(f"Filtro attributi per {file_type}...")
                 result = processing.run("native:retainfields", filter_params)
 
-                # Aggiungi campo foglio per MAP
-                if file_type == "MAP":
-                    log_message(f"Aggiunta campo foglio per {file_type}...")
-                    # Carica il layer
-                    layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
+                # Ottimizzazione della generazione dei campi utilizzando operazioni in batch
+                log_message(f"Aggiunta campo 'foglio' al layer {file_type}...")
+                output_layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
+                
+                if output_layer.isValid():
+                    # Prepara tutti i campi da aggiungere in una singola operazione
+                    fields_to_add = [QgsField("foglio", QVariant.String)]
+                    if file_type == "PLE":
+                        log_message("Aggiunta campo 'particella'...")
+                        fields_to_add.append(QgsField("particella", QVariant.String))
                     
-                    # Aggiungi campo foglio
-                    provider = layer.dataProvider()
-                    provider.addAttributes([QgsField("foglio", QVariant.String)])
-                    layer.updateFields()
+                    # Inizia la transazione per le modifiche in batch
+                    output_layer.startEditing()
+                    output_layer.dataProvider().addAttributes(fields_to_add)
+                    output_layer.updateFields()
                     
-                    # Popola il campo foglio estraendo il numero dopo l'ultimo underscore
-                    layer.startEditing()
-                    for feature in layer.getFeatures():
-                        gml_id = feature["gml_id"]
-                        if gml_id and "_" in gml_id:
-                            foglio = gml_id.split("_")[-1]
-                            feature["foglio"] = foglio
-                            layer.updateFeature(feature)
-                    layer.commitChanges()
-                    log_message(f"Campo foglio aggiunto e popolato per {file_type}")
+                    # Ottieni gli indici una sola volta fuori dal ciclo
+                    foglio_idx = output_layer.fields().indexFromName("foglio")
+                    particella_idx = output_layer.fields().indexFromName("particella") if file_type == "PLE" else -1
+                    gml_id_idx = output_layer.fields().indexFromName("gml_id")
                     
-                    # Salva le modifiche
-                    provider.truncate()
-                    data_provider = layer.dataProvider()
-                    for feature in layer.getFeatures():
-                        data_provider.addFeatures([feature])
+                    # Approccio a buffer per modifiche più veloci
+                    changes_buffer = {}
+                    
+                    # Usa una singola passata per elaborare tutti i dati
+                    for feature in output_layer.getFeatures():
+                        feature_id = feature.id()
+                        gml_id = feature[gml_id_idx]
+                        changes_buffer[feature_id] = {}
                         
-                # Aggiungi campi foglio e particella per PLE
-                elif file_type == "PLE":
-                    log_message(f"Aggiunta campi foglio e particella per {file_type}...")
-                    # Carica il layer
-                    layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
+                        # Estrai foglio (posizioni 32-36)
+                        if len(gml_id) > 36:
+                            foglio = gml_id[32:36]
+                            changes_buffer[feature_id][foglio_idx] = foglio
+                        
+                        # Estrai particella per PLE (dalla posizione 39 in poi)
+                        if file_type == "PLE" and particella_idx >= 0 and len(gml_id) > 39:
+                            particella = gml_id[39:]
+                            changes_buffer[feature_id][particella_idx] = particella
                     
-                    # Aggiungi campi foglio e particella
-                    provider = layer.dataProvider()
-                    provider.addAttributes([
-                        QgsField("foglio", QVariant.String),
-                        QgsField("particella", QVariant.String)
-                    ])
-                    layer.updateFields()
+                    # Applica tutte le modifiche in batch
+                    batch_size = 5000  # Dimensione del batch per evitare operazioni troppo grandi
+                    batch_count = 0
+                    for feature_id, attrs in changes_buffer.items():
+                        for field_idx, value in attrs.items():
+                            output_layer.changeAttributeValue(feature_id, field_idx, value)
+                        
+                        batch_count += 1
+                        if batch_count % batch_size == 0:
+                            # Aggiorna periodicamente l'interfaccia per mostrare progresso
+                            QCoreApplication.processEvents()
                     
-                    # Popola i campi foglio e particella
-                    layer.startEditing()
-                    for feature in layer.getFeatures():
-                        gml_id = feature["gml_id"]
-                        if gml_id and "_" in gml_id and "." in gml_id:
-                            # Per il foglio: estrai le cifre tra l'ultimo _ e il punto
-                            parts = gml_id.split("_")
-                            last_part = parts[-1]
-                            if "." in last_part:
-                                foglio = last_part.split(".")[0]
-                                particella = last_part.split(".")[1]
-                                feature["foglio"] = foglio
-                                feature["particella"] = particella
-                                layer.updateFeature(feature)
-                    layer.commitChanges()
-                    log_message(f"Campi foglio e particella aggiunti e popolati per {file_type}")
-                    
-                    # Salva le modifiche
-                    provider.truncate()
-                    data_provider = layer.dataProvider()
-                    for feature in layer.getFeatures():
-                        data_provider.addFeatures([feature])
+                    # Finalizza le modifiche e controlla errori
+                    success = output_layer.commitChanges()
+                    if success:
+                        log_message(f"Campi calcolati correttamente per il layer {file_type}")
+                    else:
+                        log_message(f"ERRORE: Impossibile aggiornare i campi per il layer {file_type}")
+                        log_message(str(output_layer.commitErrors()))
+                else:
+                    log_message(f"ERRORE: Il layer di output {file_type} non è valido")
 
-                if inputs["load_layers"] == "Sì":
-                    merged_layer = QgsVectorLayer(
-                        output_file, f"{file_type}_Uniti", "ogr"
-                    )
+                # Pulizia risorse temporanee in modo più robusto
+                try:
+                    # Prima rilascia i riferimenti QGIS al file
+                    for layer_id, layer in list(QgsProject.instance().mapLayers().items()):
+                        if temp_merge in layer.source():
+                            QgsProject.instance().removeMapLayer(layer_id)
+                    
+                    # Libera memoria e dai tempo al sistema
+                    output_layer = None
+                    gc.collect()
+                    time.sleep(1)
+                    
+                    # Ora prova a cancellare il file temporaneo
+                    if os.path.exists(temp_merge):
+                        os.remove(temp_merge)
+                        log_message(f"File temporaneo rimosso")
+                    
+                    # Rimuovi anche la directory temporanea se vuota
+                    if len(os.listdir(temp_dir)) == 0:
+                        os.rmdir(temp_dir)
+                except Exception as e:
+                    log_message(f"Nota: Impossibile rimuovere alcuni file temporanei: {str(e)}")
+                    log_message("I file temporanei verranno rimossi alla chiusura di QGIS")
+                
+                # Carica i layer se richiesto
+                if inputs["load_layers"]:
+                    merged_layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
                     if merged_layer.isValid():
                         QgsProject.instance().addMapLayer(merged_layer)
                         log_message(f"Layer {file_type} caricato in QGIS")
+                    else:
+                        log_message(f"ERRORE: Impossibile caricare il layer {file_type}")
                             
                 end_time = datetime.now()
                 
@@ -479,14 +508,37 @@ class catasto_gml_merger:
 
 
         def pulisci_temporanea():
+            global directory_temporanea
             dir_path = directory_temporanea
 
+            if not dir_path or not os.path.exists(dir_path):
+                log_message("Nessuna directory temporanea da pulire")
+                return
+                
+            # Libera tutti i layer che potrebbero usare file nella directory temporanea
+            for layer_id, layer in list(QgsProject.instance().mapLayers().items()):
+                if dir_path in layer.source():
+                    QgsProject.instance().removeMapLayer(layer_id)
+            
+            # Forza garbage collection
+            gc.collect()
+            time.sleep(1)
+            
             try:
+                for root, dirs, files in os.walk(dir_path, topdown=False):
+                    for file in files:
+                        try:
+                            os.remove(os.path.join(root, file))
+                        except:
+                            log_message(f"Impossibile rimuovere {file}")
+                
                 shutil.rmtree(dir_path)
-                log_message(f"directory {dir_path} rimossa correttamente")
+                log_message(f"Directory {dir_path} rimossa correttamente")
             except OSError as e:
-               log_message("\nError: %s : %s" % (dir_path, e.strerror))
+                log_message(f"\nErrore nella pulizia: {str(e)}")
+                log_message("Alcuni file temporanei verranno rimossi alla chiusura di QGIS")
 
+            # Resetta l'interfaccia
             self.dlg.le_folder.setFilePath("")
             self.dlg.le_map_output.setFilePath("")
             self.dlg.le_ple_output.setFilePath("")
@@ -505,3 +557,19 @@ class catasto_gml_merger:
         self.dlg.cb_region.currentIndexChanged.connect(url_update)                                                          
         self.dlg.btn_process.clicked.connect(process_gml_files)
         self.dlg.btn_close.clicked.connect(pulisci_temporanea)
+
+
+class ProgressManager:
+    def __init__(self, dialog, total_steps):
+        self.dialog = dialog
+        self.total = total_steps
+        self.current = 0
+        self.dialog.progressBar.setMaximum(total_steps)
+        self.dialog.progressBar.setValue(0)
+    
+    def step(self, message=None):
+        self.current += 1
+        self.dialog.progressBar.setValue(self.current)
+        if message:
+            log_message(message)
+        QCoreApplication.processEvents()  # Mantiene l'interfaccia reattiva
