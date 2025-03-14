@@ -216,7 +216,7 @@
    <item row="10" column="1">
     <widget class="QPushButton" name="btn_close">
      <property name="styleSheet">
-      <string>background-color:rgb(185, 146, 88); color: white; font-weight: bold;</string>
+      <string>background-color:rgb(185, 132, 88); color: white; font-weight: bold;</string>
      </property>
      <property name="text">
       <string>Pulisci Temporanei e Chiudi</string>
@@ -344,12 +344,16 @@
      <property name="text">
       <string>Elabora</string>
      </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>:/qt-project.org/styles/commonstyle/images/down-16.png</normaloff>:/qt-project.org/styles/commonstyle/images/down-16.png</iconset>
+     </property>
     </widget>
    </item>
    <item row="4" column="1">
     <widget class="QComboBox" name="cb_format">
      <property name="toolTip">
-      <string>Seleziona il formato di output</string>
+      <string>Seleziona il formato di output (shp taglia nomi attributo)</string>
      </property>
      <item>
       <property name="text">
@@ -359,11 +363,6 @@
      <item>
       <property name="text">
        <string>geoJSON</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>GML</string>
       </property>
      </item>
      <item>

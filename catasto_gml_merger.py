@@ -222,7 +222,6 @@ class catasto_gml_merger:
             print(inputs['url'])
             
             formats = {
-                'GML': '.gml',
                 'GPKG': '.gpkg',
                 'shp': '.shp',
                 'GeoJSON': '.geojson'
@@ -407,16 +406,20 @@ class catasto_gml_merger:
                         os.rmdir(temp_dir)
                 except Exception as e:
                     log_message(f"Nota: Impossibile rimuovere alcuni file temporanei: {str(e)}")
-                    log_message("I file temporanei verranno rimossi alla chiusura di QGIS")
+                    log_message("<span style='color:#FF8C00;font-weight:bold;'>I file temporanei verranno rimossi alla chiusura di QGIS</span>")
                 
                 # Carica i layer se richiesto
                 if inputs["load_layers"]:
-                    merged_layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
+                    # Ottieni il nome del file senza percorso e estensione
+                    file_name = os.path.basename(output_file)
+                    base_name = os.path.splitext(file_name)[0]
+                    
+                    merged_layer = QgsVectorLayer(output_file, base_name, "ogr")
                     if merged_layer.isValid():
                         QgsProject.instance().addMapLayer(merged_layer)
-                        log_message(f"Layer {file_type} caricato in QGIS")
+                        log_message(f"Layer {base_name} caricato in QGIS")
                     else:
-                        log_message(f"ERRORE: Impossibile caricare il layer {file_type}")
+                        log_message(f"ERRORE: Impossibile caricare il layer {base_name}")
                             
                 end_time = datetime.now()
                 

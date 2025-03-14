@@ -1,7 +1,7 @@
 # Guida al plugin CatastoIT_GML_Merger_Pro per QGIS
 
 ## Descrizione generale
-CatastoIT_GML_Merger_Pro è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano. Il plugin permette di lavorare con file di mappa (MAP) e particelle (PLE), convertendoli in diversi formati (GML, GPKG, SHP, GeoJSON) per un'integrazione completa nei flussi di lavoro GIS.
+**CatastoIT_GML_Merger_Pro** è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano. Il plugin permette di lavorare con file di mappa (MAP) e particelle (PLE), convertendoli in diversi formati (GPKG, SHP, GeoJSON) per un'integrazione completa nei flussi di lavoro GIS.
 
 ![](./imgs/gui.png)
 
@@ -10,7 +10,7 @@ CatastoIT_GML_Merger_Pro è un plugin avanzato per QGIS che consente di scaricar
 1. **Download dati catastali**: Scarica automaticamente file ZIP da un URL specifico per ogni regione italiana
 2. **Estrazione intelligente**: Decomprime file ZIP delle province e dei comuni con gestione ottimizzata dello spazio
 3. **Unione file GML**: Unisce i file GML estratti in un unico file con risoluzione automatica dei conflitti
-4. **Conversione multi-formato**: Supporta l'esportazione in GML, GPKG, SHP, GeoJSON con preservazione completa degli attributi
+4. **Conversione multi-formato**: Supporta l'esportazione in GPKG, SHP, GeoJSON con preservazione completa degli attributi
 5. **Caricamento in QGIS**: Opzione per caricare direttamente i layer risultanti in QGIS con stile predefinito
 6. **Gestione della memoria**: Ottimizzazione per la gestione di grandi volumi di dati catastali
 7. **Log dettagliato**: Registrazione completa delle operazioni per controllo e debug
