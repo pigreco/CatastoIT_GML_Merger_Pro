@@ -3,27 +3,27 @@
 # This file should be included when you package your plugin.# Mandatory items:
 
 [general]
-name=Catasto_gml_merger
-qgisMinimumVersion=3.0
-description=catasto_gml_merger
+name=CatastoIT_GML_Merger_Pro
+qgisMinimumVersion=3.22
+description=CatastoIT_GML_Merger_Pro
 version=0.1
-author=Salvatore Fiandaca
-email=Salvatore Fiandaca
+author=Salvatore Fiandaca, Giulio Fattori
+email=pigrecoinfinito@gmail.com
 
-about=Scarica set particelle e mappe catastali
+about= <b>Catasto IT GML Merger Pro</b> è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano. Il plugin permette di lavorare con file di mappa (MAP) e particelle (PLE), convertendoli in diversi formati (GPKG, SHP, GeoJSON) e estrae il foglio e la particella in attributi separati per un'integrazione completa nei flussi di lavoro GIS.<br><br> EN: It is an advanced plugin for QGIS that allows downloading, extracting, and merging GML files from the Italian land registry. The plugin enables working with map files (MAP) and parcel files (PLE), converting them into various formats (GPKG, SHP, GeoJSON), and extracts the sheet and parcel into separate attributes for seamless integration into GIS workflows.
 
-tracker=http://bugs
-repository=http://repo
+tracker=https://github.com/pigreco/CatastoIT_GML_Merger_Pro/issues
+repository=https://github.com/pigreco/CatastoIT_GML_Merger_Pro/blob/main/README.md
 # End of mandatory metadata
 
 # Recommended items:
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-# changelog=
+# changelog= v 0.1 Scarica set particelle e mappe catastali per regione e in vari formati
 
 # Tags are comma separated with spaces allowed
-tags=python
+tags=catasto, particelle, fogli, regione, italia
 
 homepage=http://homepage
 category=Plugins
@@ -39,7 +39,7 @@ deprecated=False
 # Check the documentation for more information.
 # plugin_dependencies=
 
-Category of the plugin: Raster, Vector, Database or Web
+Category of the plugin:Vector, GPKG, Geojson, shp
 # category=
 
 # If the plugin can run on QGIS Server.
