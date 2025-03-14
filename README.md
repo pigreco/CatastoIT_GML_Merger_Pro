@@ -35,7 +35,7 @@
 - Supporto per la proiezione EPSG:3003/3004 dei dati catastali italiani
 
 ## Dati di output
-- Nei file di output vengono eliminati i campi inutili e mantanuti solo `gml_id` e `ADMINISTRATIVEUNIT`
+- Nei file di output vengono eliminati i campi inutili e mantenuti solo `gml_id` e `ADMINISTRATIVEUNIT`
 - Nei file di output vengono aggiunti campi calcolati per facilitare l'identificazione catastale
   - Campo **Foglio**: estratto automaticamente dai dati originali per rapida consultazione
   - Campo **Particella**: numero identificativo della particella catastale, elaborato dal codice originale
