@@ -23,7 +23,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtWidgets import QAction, QApplication
 from qgis.core import Qgis, QgsVectorLayer, QgsProject, QgsMessageLog, QgsField
 
 # Initialize Qt resources from file resources.py
@@ -41,6 +41,8 @@ import processing
 import time
 import gc
 from datetime import datetime, timedelta
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import Qt
 directory_temporanea = ""                
 
 
@@ -198,6 +200,9 @@ class catasto_gml_merger:
         if self.first_start == True:
             self.first_start = False
             self.dlg = catasto_gml_mergerDialog()
+            
+            # La checkbox cb_filter_province (riga 3) e la combobox cb_province (riga 4) 
+            # sono già definite nell'UI, dobbiamo solo configurarle
 
         self.dlg.show()
 
@@ -221,10 +226,16 @@ class catasto_gml_merger:
             inputs['url'] = self.dlg.le_url.text()
             print(inputs['url'])
             
+            # Assumiamo sempre che il filtro per provincia sia attivo
+            inputs['filter_by_province'] = True
+            inputs['province_code'] = self.dlg.cb_province.currentText().strip().upper()
+            if not inputs['province_code']:
+                log_message("ERRORE: Codice provincia non selezionato")
+                return None
+            print(f"Filtro per provincia: {inputs['province_code']}")
+            
             formats = {
-                'GPKG': '.gpkg',
-                'shp': '.shp',
-                'GeoJSON': '.geojson'
+                'GPKG': '.gpkg'
             }
 
             format_name = self.dlg.cb_format.currentText()
@@ -233,7 +244,6 @@ class catasto_gml_merger:
             print(inputs['output_extension'])
             
             if file_type in ['Mappe (MAP)', 'Entrambi']:
-
                 map_output = self.dlg.le_map_output.filePath()                                      
                 if not map_output: return None
                 if not map_output.endswith(formats[format_name]):
@@ -242,7 +252,6 @@ class catasto_gml_merger:
                 print(inputs['map_output'])
             
             if file_type in ['Particelle (PLE)', 'Entrambi']:
-
                 ple_output = self.dlg.le_ple_output.filePath()                                        
                 if not ple_output: return None
                 if not ple_output.endswith(formats[format_name]):
@@ -250,10 +259,7 @@ class catasto_gml_merger:
                 inputs['ple_output'] = ple_output
                 print(inputs['ple_output'])
 
-            if self.dlg.cb_load_layers.isChecked():
-                inputs['load_layers'] =  'Sì'
-            else:
-                return None
+            inputs['load_layers'] = self.dlg.cb_load_layers.isChecked()
             print(inputs['load_layers'])
             
             self.dlg.text_log.clear()
@@ -275,303 +281,436 @@ class catasto_gml_merger:
                 os.makedirs(temp_dir, exist_ok=True)
                 temp_merge = os.path.join(temp_dir, f"temp_merge_{file_type}_{int(time.time())}.gpkg")
 
-                merge_params = {
-                    "LAYERS": source_files,
-                    "CRS": None,
-                    "OUTPUT": temp_merge,
-                }
+                # Verifica directory di output e creala se necessario
+                output_dir = os.path.dirname(output_file)
+                if output_dir and not os.path.exists(output_dir):
+                    try:
+                        os.makedirs(output_dir, exist_ok=True)
+                        log_message(f"Directory di output creata: {output_dir}")
+                    except Exception as e:
+                        log_message(f"ERRORE: Impossibile creare la directory di output: {str(e)}")
+                        return None
 
-                log_message(f"Unione file {file_type}...")
-                processing.run("native:mergevectorlayers", merge_params)
+                # Verifica che la cartella di output sia scrivibile
+                try:
+                    test_file = os.path.join(output_dir, "test_write.tmp")
+                    with open(test_file, 'w') as f:
+                        f.write("test")
+                    os.remove(test_file)
+                except Exception as e:
+                    log_message(f"ERRORE: La directory di output non è scrivibile: {str(e)}")
+                    return None
 
-                # Chiudi esplicitamente i riferimenti ai layer che potrebbero utilizzare il file temporaneo
-                project = QgsProject.instance()
-                layers_to_remove = []
-                for layer_id, layer in project.mapLayers().items():
-                    if temp_merge in layer.source():
-                        layers_to_remove.append(layer_id)
-                
-                for layer_id in layers_to_remove:
-                    project.removeMapLayer(layer_id)
-                
-                # Forza il garbage collection
-                gc.collect()
-                time.sleep(0.5)
-
-                # Gestione speciale per shapefile: assicurarsi che il percorso di output non abbia estensione
-                # il processing algorithm aggiungerà automaticamente .shp
-                if inputs['output_extension'] == '.shp':
-                    if output_file.lower().endswith('.shp'):
-                        output_file = output_file[:-4]  # Rimuovi l'estensione .shp
+                try:
+                    # Chiudi eventuali layer aperti che potrebbero bloccare il file di output
+                    project = QgsProject.instance()
+                    layers_to_remove = []
+                    for layer_id, layer in project.mapLayers().items():
+                        if output_file in layer.source() or temp_merge in layer.source():
+                            layers_to_remove.append(layer_id)
                     
-                    # Assicurati che la directory esista
+                    for layer_id in layers_to_remove:
+                        project.removeMapLayer(layer_id)
+                    
+                    # Rimuovi il file di output se esiste già
+                    if os.path.exists(output_file):
+                        try:
+                            os.remove(output_file)
+                            log_message(f"File di output esistente rimosso: {output_file}")
+                        except Exception as e:
+                            log_message(f"ATTENZIONE: Impossibile rimuovere il file di output esistente: {str(e)}")
+                            # Modifica il nome del file per evitare conflitti
+                            base_name = os.path.splitext(output_file)[0]
+                            ext = os.path.splitext(output_file)[1]
+                            output_file = f"{base_name}_{int(time.time())}{ext}"
+                            log_message(f"Usando nome file alternativo: {output_file}")
+
+                    # Forza il garbage collection prima di operazioni critiche
+                    gc.collect()
+                    time.sleep(0.5)
+
+                    merge_params = {
+                        "LAYERS": source_files,
+                        "CRS": None,
+                        "OUTPUT": temp_merge,
+                    }
+
+                    log_message(f"Unione file {file_type}...")
+                    processing.run("native:mergevectorlayers", merge_params)
+
+                    # Resto del codice come prima
+                    # ...
+
+                    # Chiudi esplicitamente i riferimenti ai layer che potrebbero utilizzare il file temporaneo
+                    project = QgsProject.instance()
+                    layers_to_remove = []
+                    for layer_id, layer in project.mapLayers().items():
+                        if temp_merge in layer.source():
+                            layers_to_remove.append(layer_id)
+                    
+                    for layer_id in layers_to_remove:
+                        project.removeMapLayer(layer_id)
+                    
+                    # Forza il garbage collection
+                    gc.collect()
+                    time.sleep(0.5)
+
+                    # Assicurati sempre che la directory esista, indipendentemente dal formato
                     output_dir = os.path.dirname(output_file)
-                    if not os.path.exists(output_dir):
+                    if output_dir and not os.path.exists(output_dir):
                         os.makedirs(output_dir, exist_ok=True)
 
-                filter_params = {
-                    "INPUT": temp_merge,
-                    "FIELDS": ["fid", "gml_id", "ADMINISTRATIVEUNIT"],
-                    "OUTPUT": output_file,
-                }
+                    # Processo semplificato: filtro direttamente nel formato desiderato (GPKG o GeoJSON)
+                    filter_params = {
+                        "INPUT": temp_merge,
+                        "FIELDS": ["fid", "gml_id", "ADMINISTRATIVEUNIT"],
+                        "OUTPUT": output_file
+                    }
 
-                log_message(f"Filtro attributi per {file_type}...")
-                result = processing.run("native:retainfields", filter_params)
-                
-                # Aggiorna il percorso di output per i successivi riferimenti
-                # Nel caso degli shapefile, result['OUTPUT'] conterrà il percorso corretto con estensione
-                output_file = result['OUTPUT']
+                    log_message(f"Filtro attributi per {file_type}...")
+                    result = processing.run("native:retainfields", filter_params)
+                    output_file = result['OUTPUT']
 
-                # Ottimizzazione della generazione dei campi utilizzando operazioni in batch
-                log_message(f"Aggiunta campo 'foglio' al layer {file_type}...")
-                output_layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
-                
-                if output_layer.isValid():
-                    # Prepara tutti i campi da aggiungere in una singola operazione
-                    fields_to_add = [QgsField("foglio", QVariant.String)]
-                    if file_type == "PLE":
-                        log_message("Aggiunta campo 'particella'...")
-                        fields_to_add.append(QgsField("particella", QVariant.String))
+                    # Ottimizzazione della generazione dei campi utilizzando operazioni in batch
+                    log_message(f"Aggiunta campo 'foglio' al layer {file_type}...")
+                    output_layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
                     
-                    # Inizia la transazione per le modifiche in batch
-                    output_layer.startEditing()
-                    output_layer.dataProvider().addAttributes(fields_to_add)
-                    output_layer.updateFields()
-                    
-                    # Ottieni gli indici una sola volta fuori dal ciclo
-                    foglio_idx = output_layer.fields().indexFromName("foglio")
-                    particella_idx = output_layer.fields().indexFromName("particella") if file_type == "PLE" else -1
-                    gml_id_idx = output_layer.fields().indexFromName("gml_id")
-                    
-                    # Approccio a buffer per modifiche più veloci
-                    changes_buffer = {}
-                    
-                    # Usa una singola passata per elaborare tutti i dati
-                    for feature in output_layer.getFeatures():
-                        feature_id = feature.id()
-                        gml_id = feature[gml_id_idx]
-                        changes_buffer[feature_id] = {}
+                    if output_layer.isValid():
+                        # Prepara tutti i campi da aggiungere in una singola operazione
+                        fields_to_add = [QgsField("foglio", QVariant.String)]
+                        if file_type == "PLE":
+                            log_message("Aggiunta campo 'particella'...")
+                            fields_to_add.append(QgsField("particella", QVariant.String))
                         
-                        # Estrai foglio (posizioni 32-36)
-                        if len(gml_id) > 36:
-                            foglio = gml_id[32:36]
-                            changes_buffer[feature_id][foglio_idx] = foglio
+                        # Inizia la transazione per le modifiche in batch
+                        output_layer.startEditing()
+                        output_layer.dataProvider().addAttributes(fields_to_add)
+                        output_layer.updateFields()
                         
-                        # Estrai particella per PLE (dalla posizione 39 in poi)
-                        if file_type == "PLE" and particella_idx >= 0 and len(gml_id) > 39:
-                            particella = gml_id[39:]
-                            changes_buffer[feature_id][particella_idx] = particella
-                    
-                    # Applica tutte le modifiche in batch
-                    batch_size = 5000  # Dimensione del batch per evitare operazioni troppo grandi
-                    batch_count = 0
-                    for feature_id, attrs in changes_buffer.items():
-                        for field_idx, value in attrs.items():
-                            output_layer.changeAttributeValue(feature_id, field_idx, value)
+                        # Ottieni gli indici una sola volta fuori dal ciclo
+                        foglio_idx = output_layer.fields().indexFromName("foglio")
+                        particella_idx = output_layer.fields().indexFromName("particella") if file_type == "PLE" else -1
+                        gml_id_idx = output_layer.fields().indexFromName("gml_id")
                         
-                        batch_count += 1
-                        if batch_count % batch_size == 0:
-                            # Aggiorna periodicamente l'interfaccia per mostrare progresso
-                            QCoreApplication.processEvents()
-                    
-                    # Finalizza le modifiche e controlla errori
-                    success = output_layer.commitChanges()
-                    if success:
-                        log_message(f"Campi calcolati correttamente per il layer {file_type}")
-                    else:
-                        log_message(f"ERRORE: Impossibile aggiornare i campi per il layer {file_type}")
-                        log_message(str(output_layer.commitErrors()))
-                else:
-                    log_message(f"ERRORE: Il layer di output {file_type} non è valido")
-
-                # Pulizia risorse temporanee in modo più robusto
-                try:
-                    # Prima rilascia i riferimenti QGIS al file
-                    for layer_id, layer in list(QgsProject.instance().mapLayers().items()):
-                        if temp_merge in layer.source():
-                            QgsProject.instance().removeMapLayer(layer_id)
-                    
-                    # Libera memoria e dai tempo al sistema
-                    output_layer = None
-                    gc.collect()
-                    time.sleep(1)
-                    
-                    # Ora prova a cancellare il file temporaneo
-                    if os.path.exists(temp_merge):
-                        os.remove(temp_merge)
-                        log_message(f"File temporaneo rimosso")
-                    
-                    # Rimuovi anche la directory temporanea se vuota
-                    if len(os.listdir(temp_dir)) == 0:
-                        os.rmdir(temp_dir)
-                except Exception as e:
-                    log_message(f"Nota: Impossibile rimuovere alcuni file temporanei: {str(e)}")
-                    log_message("<span style='color:#FF8C00;font-weight:bold;'>I file temporanei verranno rimossi alla chiusura di QGIS</span>")
-                
-                # Carica i layer se richiesto
-                if inputs["load_layers"]:
-                    # Ottieni il nome del file senza percorso e estensione
-                    file_name = os.path.basename(output_file)
-                    base_name = os.path.splitext(file_name)[0]
-                    
-                    merged_layer = QgsVectorLayer(output_file, base_name, "ogr")
-                    if merged_layer.isValid():
-                        QgsProject.instance().addMapLayer(merged_layer)
-                        log_message(f"Layer {base_name} caricato in QGIS")
-                    else:
-                        log_message(f"ERRORE: Impossibile caricare il layer {base_name}")
+                        # Approccio a buffer per modifiche più veloci
+                        changes_buffer = {}
+                        
+                        # Usa una singola passata per elaborare tutti i dati
+                        for feature in output_layer.getFeatures():
+                            feature_id = feature.id()
+                            gml_id = feature[gml_id_idx]
+                            changes_buffer[feature_id] = {}
                             
-                end_time = datetime.now()
-                
-                return end_time - start_time
+                            # Estrai foglio (posizioni 32-36)
+                            if len(gml_id) > 36:
+                                foglio = gml_id[32:36]
+                                changes_buffer[feature_id][foglio_idx] = foglio
+                            
+                            # Estrai particella per PLE (dalla posizione 39 in poi)
+                            if file_type == "PLE" and particella_idx >= 0 and len(gml_id) > 39:
+                                particella = gml_id[39:]
+                                changes_buffer[feature_id][particella_idx] = particella
+                        
+                        # Applica tutte le modifiche in batch
+                        batch_size = 5000  # Dimensione del batch per evitare operazioni troppo grandi
+                        batch_count = 0
+                        for feature_id, attrs in changes_buffer.items():
+                            for field_idx, value in attrs.items():
+                                output_layer.changeAttributeValue(feature_id, field_idx, value)
+                            
+                            batch_count += 1
+                            if batch_count % batch_size == 0:
+                                # Aggiorna periodicamente l'interfaccia per mostrare progresso
+                                QCoreApplication.processEvents()
+                        
+                        # Finalizza le modifiche e controlla errori
+                        success = output_layer.commitChanges()
+                        if success:
+                            log_message(f"Campi calcolati correttamente per il layer {file_type}")
+                        else:
+                            log_message(f"ERRORE: Impossibile aggiornare i campi per il layer {file_type}")
+                            log_message(str(output_layer.commitErrors()))
+                    else:
+                        log_message(f"ERRORE: Il layer di output {file_type} non è valido")
+
+                    # Pulizia risorse temporanee in modo più robusto
+                    try:
+                        # Prima rilascia i riferimenti QGIS al file
+                        for layer_id, layer in list(QgsProject.instance().mapLayers().items()):
+                            if temp_merge in layer.source():
+                                QgsProject.instance().removeMapLayer(layer_id)
+                        
+                        # Libera memoria e dai tempo al sistema
+                        output_layer = None
+                        gc.collect()
+                        time.sleep(1)
+                        
+                        # Ora prova a cancellare i file temporanei
+                        if os.path.exists(temp_merge):
+                            try:
+                                os.remove(temp_merge)
+                                log_message(f"File temporaneo rimosso: {os.path.basename(temp_merge)}")
+                            except Exception as e:
+                                log_message(f"Impossibile rimuovere il file temporaneo: {str(e)}")
+                        
+                        # Rimuovi anche la directory temporanea se vuota
+                        if os.path.exists(temp_dir) and len(os.listdir(temp_dir)) == 0:
+                            os.rmdir(temp_dir)
+                            log_message("Directory temporanea rimossa")
+                    except Exception as e:
+                        log_message(f"Nota: Impossibile rimuovere alcuni file temporanei: {str(e)}")
+                        log_message("<span style='color:#FF8C00;font-weight:bold;'>I file temporanei verranno rimossi alla chiusura del Plugin</span>")
+                    
+                    # Carica i layer se richiesto
+                    if inputs["load_layers"]:
+                        # Aggiungi un avviso chiaro sui file temporanei
+                        log_message("<span style='color:#FF8C00;font-weight:bold;'>I file temporanei saranno ELIMINATI dopo la conclusione del Processo pigiando sul bottone Pulisci!</span>")
+                        
+                        # Ottieni il nome del file senza percorso e estensione
+                        file_name = os.path.basename(output_file)
+                        base_name = os.path.splitext(file_name)[0]
+                        
+                        merged_layer = QgsVectorLayer(output_file, base_name, "ogr")
+                        if merged_layer.isValid():
+                            QgsProject.instance().addMapLayer(merged_layer)
+                            log_message(f"Layer {base_name} caricato in QGIS")
+                        else:
+                            log_message(f"ERRORE: Impossibile caricare il layer {base_name}")
+                                
+                    end_time = datetime.now()
+                    
+                    # Aggiungi questo per aggiornare gli input con i percorsi di output corretti
+                    if file_type == "MAP" and "map_output" in inputs:
+                        inputs["map_output"] = output_file
+                    elif file_type == "PLE" and "ple_output" in inputs:
+                        inputs["ple_output"] = output_file
+                    
+                    return end_time - start_time
+
+                except Exception as e:
+                    log_message(f"ERRORE: Si è verificato un problema durante l'unione dei file: {str(e)}")
+                    return None
 
             return None
 
         def process_gml_files():
-
             global directory_temporanea
-
-            inputs = collect_inputs()
-            if not inputs:
-                log_message("Operazione annullata")
-                return
-                    
+            
+            # Imposta il cursore di attesa
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            
             try:
-                temp_dir = tempfile.mkdtemp()
+                inputs = collect_inputs()
+                if not inputs:
+                    log_message("Operazione annullata")
+                    QApplication.restoreOverrideCursor()
+                    return
+                
+                temp_dir = ""
+                try:
+                    temp_dir = tempfile.mkdtemp()
+                    directory_temporanea = temp_dir  # Assegnazione corretta all'inizio
 
-                if "map_output" in inputs:
-                    map_folder = os.path.join(temp_dir, "map_files")
-                    os.makedirs(map_folder, exist_ok=True)
-                if "ple_output" in inputs:
-                    ple_folder = os.path.join(temp_dir, "ple_files")
-                    os.makedirs(ple_folder, exist_ok=True)
+                    # Crea le cartelle solo una volta
+                    if "map_output" in inputs:
+                        map_folder = os.path.join(temp_dir, "map_files")
+                        os.makedirs(map_folder, exist_ok=True)
+                    if "ple_output" in inputs:
+                        ple_folder = os.path.join(temp_dir, "ple_files")
+                        os.makedirs(ple_folder, exist_ok=True)
 
-                log_message(f"Cartelle create in: {temp_dir}\n")
-            finally:
-                log_message("Download del file zip...\n")
-                zip_path = os.path.join(temp_dir, "downloaded.zip")
-                urllib.request.urlretrieve(inputs["url"], zip_path)
+                    log_message(f"Cartelle create in: {temp_dir}\n")
+                    log_message("Download del file zip...\n")
+                    zip_path = os.path.join(temp_dir, "downloaded.zip")
+                    urllib.request.urlretrieve(inputs["url"], zip_path)
 
-                log_message("Estrazione province...\n")
-                with ZipFile(zip_path, "r") as zip_ref:
-                    zip_ref.extractall(temp_dir)
-                province_zips = [
-                    f
-                    for f in os.listdir(temp_dir)
-                    if f.endswith(".zip") and f != "downloaded.zip"
-                ]
-                for prov_zip in province_zips:
-                    log_message(f"Elaborazione provincia: {prov_zip}\n")
-                    prov_path = os.path.join(temp_dir, prov_zip)
-                    prov_dir = os.path.join(temp_dir, os.path.splitext(prov_zip)[0])
-
-                    with ZipFile(prov_path, "r") as zip_ref:
-                        zip_ref.extractall(prov_dir)
-                    comuni_zips = [
-                        f for f in os.listdir(prov_dir) if f.endswith(".zip")
+                    log_message("Estrazione province...\n")
+                    with ZipFile(zip_path, "r") as zip_ref:
+                        zip_ref.extractall(temp_dir)
+                    province_zips = [
+                        f
+                        for f in os.listdir(temp_dir)
+                        if f.endswith(".zip") and f != "downloaded.zip"
                     ]
 
+                    # Filtra sempre per provincia
+                    province_code = inputs['province_code']
+                    filtered_province_zips = []
+                    for prov_zip in province_zips:
+                        # Verifica se il nome del file contiene il codice provincia
+                        if province_code in prov_zip.upper():
+                            filtered_province_zips.append(prov_zip)
+                            log_message(f"Provincia selezionata: {prov_zip}")
+                    
+                    if not filtered_province_zips:
+                        log_message(f"ATTENZIONE: Nessuna provincia trovata con il codice '{province_code}'")
+                        log_message("Controlla che il codice provincia sia corretto e riprova")
+                        return
+                    
+                    province_zips = filtered_province_zips
+                    log_message(f"Elaborazione limitata alla provincia: {province_code}")
+                    
+                    # Modifica il nome dell'output con il codice provincia
+                    if inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
+                        base_name = os.path.splitext(inputs["map_output"])[0]
+                        ext = os.path.splitext(inputs["map_output"])[1]
+                        inputs["map_output"] = f"{base_name}_{province_code}{ext}"
+                        log_message(f"Output MAP aggiornato: {inputs['map_output']}")
+                    
+                    if inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
+                        base_name = os.path.splitext(inputs["ple_output"])[0]
+                        ext = os.path.splitext(inputs["ple_output"])[1]
+                        inputs["ple_output"] = f"{base_name}_{province_code}{ext}"
+                        log_message(f"Output PLE aggiornato: {inputs['ple_output']}")
+
+                    # Estrai tutti i file GML
+                    log_message("Estrazione di tutti i file GML...")
+                    for prov_zip in province_zips:
+                        log_message(f"Elaborazione provincia: {prov_zip}")
+                        prov_path = os.path.join(temp_dir, prov_zip)
+                        prov_dir = os.path.join(temp_dir, os.path.splitext(prov_zip)[0])
+
+                        with ZipFile(prov_path, "r") as zip_ref:
+                            zip_ref.extractall(prov_dir)
+                        comuni_zips = [
+                            f for f in os.listdir(prov_dir) if f.endswith(".zip")
+                        ]
                                                                                                  
-                    for com_zip in comuni_zips:
-                        log_message(f"Elaborazione comune: {com_zip}")
-                        com_path = os.path.join(prov_dir, com_zip)
-                        com_dir = os.path.join(prov_dir, os.path.splitext(com_zip)[0])
-                        with ZipFile(com_path, "r") as zip_ref:
-                            zip_ref.extractall(com_dir)
+                        for com_zip in comuni_zips:
+                            log_message(f"Elaborazione comune: {com_zip}")
+                            com_path = os.path.join(prov_dir, com_zip)
+                            com_dir = os.path.join(prov_dir, os.path.splitext(com_zip)[0])
+                            with ZipFile(com_path, "r") as zip_ref:
+                                zip_ref.extractall(com_dir)
 
-                ple_count = map_count = 0
-                for root, dirs, files in os.walk(temp_dir):
-                    for file in files:
-                        if file.endswith(".gml"):
-                            file_path = os.path.join(root, file)
-                            if "ple_output" in inputs and "_ple" in file.lower():
-                                shutil.move(file_path, os.path.join(ple_folder, file))
-                                ple_count += 1
-                            elif "map_output" in inputs and "_map" in file.lower():
-                                shutil.move(file_path, os.path.join(map_folder, file))
-                                map_count += 1
-                        
-                log_message(f"\nFile trovati: {ple_count} PLE, {map_count} MAP")
+                    # Conta e sposta i file GML
+                    ple_count = map_count = 0
+                    for root, dirs, files in os.walk(temp_dir):
+                        for file in files:
+                            if file.endswith(".gml"):
+                                file_path = os.path.join(root, file)
+                                if "ple_output" in inputs and "_ple" in file.lower():
+                                    shutil.move(file_path, os.path.join(ple_folder, file))
+                                    ple_count += 1
+                                elif "map_output" in inputs and "_map" in file.lower():
+                                    shutil.move(file_path, os.path.join(map_folder, file))
+                                    map_count += 1
+                            
+                    log_message(f"\nFile trovati: {ple_count} PLE, {map_count} MAP")
+                    
+                    # Solo un'operazione di unione per tipo di file
+                    processing_times = {}
 
-                processing_times = {}
+                    # Esegui l'unione una sola volta per tipo di file
+                    if inputs["file_type"] in ["Mappe (MAP)", "Entrambi"] and map_count > 0:
+                        log_message("\nUnione files MAP\n")
+                        map_time = merge_files(
+                            map_folder, inputs["map_output"], "MAP", inputs
+                        )
+                        if map_time:
+                            processing_times["MAP"] = map_time
 
-                if inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
-                    log_message("\nMerging MAP\n")
-                    map_time = merge_files(
-                        map_folder, inputs["map_output"], "MAP", inputs
-                    )
-                    if map_time:
-                        processing_times["MAP"] = map_time
+                    if inputs["file_type"] in ["Particelle (PLE)", "Entrambi"] and ple_count > 0:
+                        log_message("\nUnione files PLE\n")
+                        ple_time = merge_files(
+                            ple_folder, inputs["ple_output"], "PLE", inputs
+                        )
+                        if ple_time:
+                            processing_times["PLE"] = ple_time 
 
-                if inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
-                    log_message("\nMerging PLE\n")
-                    ple_time = merge_files(
-                        ple_folder, inputs["ple_output"], "PLE", inputs
-                    )
-                    if ple_time:
-                        processing_times["PLE"] = ple_time 
-
-                log_message("\nElaborazione completata!")
-                if "map_output" in inputs:
-                    log_message(f"File MAP salvato in: {inputs['map_output']}")
-                if "ple_output" in inputs:
-                    log_message(f"File PLE salvato in: {inputs['ple_output']}")
-                        
-                log_message("\nTempi di elaborazione:")
-                for file_type, proc_time in processing_times.items():
-                    if proc_time:
-                        minutes = proc_time.total_seconds() / 60
-                        log_message(f"Merge {file_type}: {minutes:.2f} minuti")
-            directory_temporanea = temp_dir
-
+                    log_message("\nElaborazione completata!")
+                    if "map_output" in inputs and map_count > 0:
+                        log_message(f"File MAP salvato in: {inputs['map_output']}")
+                    if "ple_output" in inputs and ple_count > 0:
+                        log_message(f"File PLE salvato in: {inputs['ple_output']}")
+                            
+                    log_message("\nTempi di elaborazione:")
+                    for file_type, proc_time in processing_times.items():
+                        if proc_time:
+                            minutes = proc_time.total_seconds() / 60
+                            log_message(f"Merge {file_type}: {minutes:.2f} minuti")
+                            
+                except Exception as e:
+                    log_message(f"\nSi è verificato un errore durante l'elaborazione: {str(e)}")
+                    if temp_dir:
+                        directory_temporanea = temp_dir  # Assegna anche in caso di errore
+            except Exception as e:
+                log_message(f"\nSi è verificato un errore durante l'elaborazione: {str(e)}")
+                # Registra informazioni più dettagliate per il debug
+                import traceback
+                log_message(f"\nDettagli errore:\n{traceback.format_exc()}")
+                if temp_dir:
+                    directory_temporanea = temp_dir  # Assegna anche in caso di errore
+            finally:
+                # Ripristina il cursore normale
+                QApplication.restoreOverrideCursor()
 
         def pulisci_temporanea():
             global directory_temporanea
             dir_path = directory_temporanea
 
-            if not dir_path or not os.path.exists(dir_path):
+            if dir_path and os.path.exists(dir_path):
+                # Libera tutti i layer che potrebbero usare file nella directory temporanea
+                for layer_id, layer in list(QgsProject.instance().mapLayers().items()):
+                    if dir_path in layer.source():
+                        QgsProject.instance().removeMapLayer(layer_id)
+                
+                # Forza garbage collection
+                gc.collect()
+                time.sleep(1)
+                
+                try:
+                    for root, dirs, files in os.walk(dir_path, topdown=False):
+                        for file in files:
+                            try:
+                                os.remove(os.path.join(root, file))
+                            except:
+                                log_message(f"Impossibile rimuovere {file}")
+                    
+                    shutil.rmtree(dir_path)
+                    log_message(f"Directory {dir_path} rimossa correttamente")
+                except OSError as e:
+                    log_message(f"\nErrore nella pulizia: {str(e)}")
+                    log_message("Alcuni file temporanei verranno rimossi alla chiusura del Plugin")
+            else:
                 log_message("Nessuna directory temporanea da pulire")
-                return
-                
-            # Libera tutti i layer che potrebbero usare file nella directory temporanea
-            for layer_id, layer in list(QgsProject.instance().mapLayers().items()):
-                if dir_path in layer.source():
-                    QgsProject.instance().removeMapLayer(layer_id)
-            
-            # Forza garbage collection
-            gc.collect()
-            time.sleep(1)
-            
-            try:
-                for root, dirs, files in os.walk(dir_path, topdown=False):
-                    for file in files:
-                        try:
-                            os.remove(os.path.join(root, file))
-                        except:
-                            log_message(f"Impossibile rimuovere {file}")
-                
-                shutil.rmtree(dir_path)
-                log_message(f"Directory {dir_path} rimossa correttamente")
-            except OSError as e:
-                log_message(f"\nErrore nella pulizia: {str(e)}")
-                log_message("Alcuni file temporanei verranno rimossi alla chiusura di QGIS")
 
             # Resetta l'interfaccia
-            self.dlg.le_folder.setFilePath("")
+            # self.dlg.le_folder.setFilePath(r"C:\Users\pigre\Downloads\munnizza")
+            # oppure
+            self.dlg.le_folder.setFilePath("C:/Users/pigre/Downloads/munnizza")
             self.dlg.le_map_output.setFilePath("")
             self.dlg.le_ple_output.setFilePath("")
             self.dlg.cb_file_type.setCurrentIndex(0)
             self.dlg.cb_format.setCurrentIndex(0)
             self.dlg.cb_region.setCurrentIndex(0)
+            self.dlg.cb_province.setCurrentIndex(0)
             self.dlg.le_url.clear()
             self.dlg.text_log.clear()
             
+            # Chiudi sempre il dialog alla fine
             self.dlg.hide()
 
         def url_update():
             self.dlg.le_url.setText("https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/GetDataset.php?dataset=" + self.dlg.cb_region.currentText() + ".zip")
             pass       
             
-        self.dlg.cb_region.currentIndexChanged.connect(url_update)                                                          
+        def aggiorna_campi_output():
+            """Attiva o disattiva i campi di output in base al tipo di file selezionato"""
+            file_type = self.dlg.cb_file_type.currentText()
+            
+            # Gestisci i widget per l'output MAP
+            map_enabled = file_type in ["Mappe (MAP)", "Entrambi"]
+            self.dlg.le_map_output.setEnabled(map_enabled)
+            
+            # Gestisci i widget per l'output PLE
+            ple_enabled = file_type in ["Particelle (PLE)", "Entrambi"]
+            self.dlg.le_ple_output.setEnabled(ple_enabled)
+            
+        self.dlg.cb_region.currentIndexChanged.connect(url_update)
+        self.dlg.cb_file_type.currentIndexChanged.connect(aggiorna_campi_output)                                                       
         self.dlg.btn_process.clicked.connect(process_gml_files)
         self.dlg.btn_close.clicked.connect(pulisci_temporanea)
+        
+        # Imposta lo stato iniziale dei campi di output
+        aggiorna_campi_output()

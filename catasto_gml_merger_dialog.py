@@ -26,7 +26,8 @@ import os
 
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
-from .regions import REGIONS
+from qgis.PyQt.QtWidgets import QProgressBar, QPushButton
+from .regions import REGIONS, get_provinces
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -37,30 +38,45 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
     def __init__(self, parent=None):
         """Constructor."""
         super(catasto_gml_mergerDialog, self).__init__(parent)
-        # Set up the user interface from Designer through FORM_CLASS.
-        # After self.setupUi() you can access any designer object by doing
-        # self.<objectname>, and you can use autoconnect slots - see
-        # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
-        # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
         
-        # self.le_map_output.setFilter('*.gpgk')
-        # self.le_ple_output.setFilter('*.gpgk')
+        # Aggiungi ProgressBar e pulsante di annullamento
+        if not hasattr(self, 'progressBar'):
+            self.progressBar = QProgressBar(self)
+            self.progressBar.setVisible(False)
+            self.layout().addWidget(self.progressBar)
+            
+        if not hasattr(self, 'btn_cancel'):
+            self.btn_cancel = QPushButton("Annulla", self)
+            self.btn_cancel.setVisible(False)
+            self.btn_cancel.clicked.connect(self.cancel_operation)
+            self.layout().addWidget(self.btn_cancel)
         
-        # def updateFileType():
-            
-            # self.le_map_output.setFilter('*.' + self.cb_format.currentText())
-            # self.le_ple_output.setFilter('*.' + self.cb_format.currentText())
-            
-            # if self.le_map_output.filePath():
-                # self.le_map_output.setFilePath(self.le_map_output.filePath().split('.')[0]+'.'+self.cb_format.currentText())
-            
-            # if self.le_ple_output.filePath():
-                # self.le_ple_output.setFilePath(self.le_ple_output.filePath().split('.')[0]+'.'+self.cb_format.currentText())
-                    
-            # # print('update', self.cb_format.currentText())
+        # Popola il combobox delle regioni
+        self.populate_regions()
         
-        # self.cb_format.currentTextChanged.connect(updateFileType)
+        # Imposta i filtri per i file di output
+        self.le_map_output.setFilter('*.gpkg')
+        self.le_ple_output.setFilter('*.gpkg')
+        
+        def updateFileType():
+            ext = self.cb_format.currentText().lower()
+            self.le_map_output.setFilter('*.' + ext)
+            self.le_ple_output.setFilter('*.' + ext)
+            
+            if self.le_map_output.filePath():
+                base_path = self.le_map_output.filePath().split('.')[0]
+                self.le_map_output.setFilePath(base_path + '.' + ext)
+            
+            if self.le_ple_output.filePath():
+                base_path = self.le_ple_output.filePath().split('.')[0]
+                self.le_ple_output.setFilePath(base_path + '.' + ext)
+        
+        # Connetti il segnale alla funzione
+        self.cb_format.currentTextChanged.connect(updateFileType)
+        
+        # Connetti il cambio di regione all'aggiornamento delle province
+        self.cb_region.currentTextChanged.connect(self.update_provinces)
         
     def closeEvent(self, event):
         # dir_path = directory_temporanea
@@ -86,3 +102,37 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         """Popola il combobox delle regioni."""
         self.cb_region.clear()
         self.cb_region.addItems(REGIONS)
+
+    def get_selected_region(self):
+        """Restituisce la regione selezionata."""
+        return self.cb_region.currentText()
+    
+    def update_provinces(self):
+        """Aggiorna il combobox delle province in base alla regione selezionata."""
+        region = self.cb_region.currentText()
+        provinces = get_provinces(region)
+        
+        self.cb_province.clear()
+        self.cb_province.addItems(provinces)
+
+    def cancel_operation(self):
+        """Gestisce l'evento di annullamento dell'operazione in corso."""
+        self.btn_cancel.setVisible(False)
+        self.progressBar.setVisible(False)
+        # Aggiungi qui il codice per interrompere qualsiasi operazione in corso
+        self.text_log.append("Operazione annullata dall'utente.")
+        
+    def example_usage(self):
+        """Esempio di utilizzo della progress bar e del pulsante di annullamento."""
+        self.progressBar.setVisible(True)
+        self.progressBar.setMinimum(0)
+        self.progressBar.setMaximum(100)
+        self.progressBar.setValue(0)
+        self.btn_cancel.setVisible(True)
+
+        # Durante l'elaborazione
+        self.progressBar.setValue(50)  # aggiorna il valore
+
+        # A operazione completata
+        self.progressBar.setVisible(False)
+        self.btn_cancel.setVisible(False)
