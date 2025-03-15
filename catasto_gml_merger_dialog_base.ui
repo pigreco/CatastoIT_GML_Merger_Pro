@@ -24,7 +24,7 @@
     <normaloff>icon.png</normaloff>icon.png</iconset>
   </property>
   <property name="toolTip">
-   <string>CatastoIT_GML_Merger_Pro è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano.</string>
+   <string>CatastoIT_GML_Merger_Pro è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano AdE.</string>
   </property>
   <property name="statusTip">
    <string>test status</string>
@@ -52,111 +52,11 @@
       <string>Seleziona la regione da scaricare</string>
      </property>
      <property name="currentText">
-      <string>ABRUZZO</string>
+      <string/>
      </property>
      <property name="maxVisibleItems">
       <number>20</number>
      </property>
-     <item>
-      <property name="text">
-       <string>ABRUZZO</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>BASILICATA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>CALABRIA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>CAMPANIA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>EMILIA-ROMAGNA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>FRIULI-VENEZIA-GIULIA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>LAZIO</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>LIGURIA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>LOMBARDIA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>MARCHE</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>MOLISE</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>PIEMONTE</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>PUGLIA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>SARDEGNA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>SICILIA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>TOSCANA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>TRENTINO-ALTO-ADIGE</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>UMBRIA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>VALLE-AOSTA</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>VENETO</string>
-      </property>
-     </item>
     </widget>
    </item>
    <item row="6" column="0">
@@ -219,7 +119,7 @@
       <string>background-color:rgb(185, 132, 88); color: white; font-weight: bold;</string>
      </property>
      <property name="text">
-      <string>Pulisci Temporanei e Chiudi</string>
+      <string>Pulisci File Temporanei e Chiudi</string>
      </property>
      <property name="icon">
       <iconset>

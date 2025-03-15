@@ -26,6 +26,7 @@ import os
 
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
+from .regions import REGIONS
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -80,3 +81,8 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         self.text_log.clear()
         
         print("close!")
+
+    def populate_regions(self):
+        """Popola il combobox delle regioni."""
+        self.cb_region.clear()
+        self.cb_region.addItems(REGIONS)
