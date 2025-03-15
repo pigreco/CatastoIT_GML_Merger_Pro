@@ -575,19 +575,3 @@ class catasto_gml_merger:
         self.dlg.cb_region.currentIndexChanged.connect(url_update)                                                          
         self.dlg.btn_process.clicked.connect(process_gml_files)
         self.dlg.btn_close.clicked.connect(pulisci_temporanea)
-
-
-class ProgressManager:
-    def __init__(self, dialog, total_steps):
-        self.dialog = dialog
-        self.total = total_steps
-        self.current = 0
-        self.dialog.progressBar.setMaximum(total_steps)
-        self.dialog.progressBar.setValue(0)
-    
-    def step(self, message=None):
-        self.current += 1
-        self.dialog.progressBar.setValue(self.current)
-        if message:
-            log_message(message)
-        QCoreApplication.processEvents()  # Mantiene l'interfaccia reattiva
