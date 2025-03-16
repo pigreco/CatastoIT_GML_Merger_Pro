@@ -21,9 +21,9 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant, Qt
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QApplication
+from qgis.PyQt.QtWidgets import QAction, QApplication, QListWidget
 from qgis.core import Qgis, QgsVectorLayer, QgsProject, QgsMessageLog, QgsField
 
 # Initialize Qt resources from file resources.py
@@ -41,8 +41,7 @@ import processing
 import time
 import gc
 from datetime import datetime, timedelta
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import Qt
+
 directory_temporanea = ""                
 
 
@@ -226,13 +225,19 @@ class catasto_gml_merger:
             inputs['url'] = self.dlg.le_url.text()
             print(inputs['url'])
             
-            # Assumiamo sempre che il filtro per provincia sia attivo
-            inputs['filter_by_province'] = True
-            inputs['province_code'] = self.dlg.cb_province.currentText().strip().upper()
-            if not inputs['province_code']:
-                log_message("ERRORE: Codice provincia non selezionato")
+            # Ottieni le province selezionate dalla list_provinces
+            selected_items = self.dlg.list_provinces.selectedItems()
+            if not selected_items:
+                log_message("ERRORE: Nessuna provincia selezionata")
                 return None
-            print(f"Filtro per provincia: {inputs['province_code']}")
+            
+            # Crea una lista di codici provincia dalle selezioni
+            province_codes = [item.text().strip().upper() for item in selected_items]
+            inputs['province_code'] = ','.join(province_codes)
+            inputs['filter_by_province'] = True
+            
+            log_message(f"Province selezionate: {inputs['province_code']}")
+            print(f"Province selezionate: {inputs['province_code']}")
             
             formats = {
                 'GPKG': '.gpkg'
@@ -337,9 +342,6 @@ class catasto_gml_merger:
 
                     log_message(f"Unione file {file_type}...")
                     processing.run("native:mergevectorlayers", merge_params)
-
-                    # Resto del codice come prima
-                    # ...
 
                     # Chiudi esplicitamente i riferimenti ai layer che potrebbero utilizzare il file temporaneo
                     project = QgsProject.instance()
@@ -489,6 +491,9 @@ class catasto_gml_merger:
 
                 except Exception as e:
                     log_message(f"ERRORE: Si è verificato un problema durante l'unione dei file: {str(e)}")
+                    # Aggiungi traceback per debugging
+                    import traceback
+                    log_message(f"Dettagli: {traceback.format_exc()}")
                     return None
 
             return None
@@ -506,19 +511,22 @@ class catasto_gml_merger:
                     QApplication.restoreOverrideCursor()
                     return
                 
-                temp_dir = ""
+                # Creiamo una nuova directory temporanea
+                temp_dir = tempfile.mkdtemp()
+                directory_temporanea = temp_dir
+                self.dlg.setWindowTitle("CatastoIT GML Merger")
+                
                 try:
-                    temp_dir = tempfile.mkdtemp()
-                    directory_temporanea = temp_dir  # Assegnazione corretta all'inizio
-
-                    # Crea le cartelle solo una volta
+                    # Crea le cartelle di output per i file GML
                     if "map_output" in inputs:
                         map_folder = os.path.join(temp_dir, "map_files")
                         os.makedirs(map_folder, exist_ok=True)
+                    
                     if "ple_output" in inputs:
                         ple_folder = os.path.join(temp_dir, "ple_files")
                         os.makedirs(ple_folder, exist_ok=True)
-
+                    
+                    # Download e estrazione
                     log_message(f"Cartelle create in: {temp_dir}\n")
                     log_message("Download del file zip...\n")
                     zip_path = os.path.join(temp_dir, "downloaded.zip")
@@ -527,40 +535,48 @@ class catasto_gml_merger:
                     log_message("Estrazione province...\n")
                     with ZipFile(zip_path, "r") as zip_ref:
                         zip_ref.extractall(temp_dir)
+                    
                     province_zips = [
                         f
                         for f in os.listdir(temp_dir)
                         if f.endswith(".zip") and f != "downloaded.zip"
                     ]
 
-                    # Filtra sempre per provincia
+                    # Filtro per provincia - modificato per supportare più province
                     province_code = inputs['province_code']
+                    # Dividi il codice provincia in una lista se contiene virgole
+                    province_codes = [p.strip().upper() for p in province_code.split(',')]
+                    
+                    log_message(f"Province selezionate: {', '.join(province_codes)}")
+                    
                     filtered_province_zips = []
                     for prov_zip in province_zips:
-                        # Verifica se il nome del file contiene il codice provincia
-                        if province_code in prov_zip.upper():
-                            filtered_province_zips.append(prov_zip)
-                            log_message(f"Provincia selezionata: {prov_zip}")
+                        # Verifica se il nome del file contiene uno dei codici provincia
+                        for code in province_codes:
+                            if code in prov_zip.upper():
+                                filtered_province_zips.append(prov_zip)
+                                log_message(f"Provincia selezionata: {prov_zip}")
+                                break
                     
                     if not filtered_province_zips:
-                        log_message(f"ATTENZIONE: Nessuna provincia trovata con il codice '{province_code}'")
-                        log_message("Controlla che il codice provincia sia corretto e riprova")
+                        log_message(f"ATTENZIONE: Nessuna provincia trovata con i codici '{province_code}'")
+                        log_message("Controlla che i codici provincia siano corretti e riprova")
                         return
                     
                     province_zips = filtered_province_zips
-                    log_message(f"Elaborazione limitata alla provincia: {province_code}")
                     
-                    # Modifica il nome dell'output con il codice provincia
+                    # Modifica il nome dell'output con tutti i codici provincia
+                    province_suffix = "_".join(province_codes)
                     if inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
                         base_name = os.path.splitext(inputs["map_output"])[0]
                         ext = os.path.splitext(inputs["map_output"])[1]
-                        inputs["map_output"] = f"{base_name}_{province_code}{ext}"
+                        inputs["map_output"] = f"{base_name}_{province_suffix}{ext}"
                         log_message(f"Output MAP aggiornato: {inputs['map_output']}")
                     
                     if inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
                         base_name = os.path.splitext(inputs["ple_output"])[0]
                         ext = os.path.splitext(inputs["ple_output"])[1]
-                        inputs["ple_output"] = f"{base_name}_{province_code}{ext}"
+                        inputs["ple_output"] = f"{base_name}_{province_suffix}{ext}"
                         log_message(f"Output PLE aggiornato: {inputs['ple_output']}")
 
                     # Estrai tutti i file GML
@@ -632,6 +648,8 @@ class catasto_gml_merger:
                             
                 except Exception as e:
                     log_message(f"\nSi è verificato un errore durante l'elaborazione: {str(e)}")
+                    import traceback
+                    log_message(f"\nDettagli errore:\n{traceback.format_exc()}")
                     if temp_dir:
                         directory_temporanea = temp_dir  # Assegna anche in caso di errore
             except Exception as e:
@@ -648,7 +666,7 @@ class catasto_gml_merger:
         def pulisci_temporanea():
             global directory_temporanea
             dir_path = directory_temporanea
-
+            
             if dir_path and os.path.exists(dir_path):
                 # Libera tutti i layer che potrebbero usare file nella directory temporanea
                 for layer_id, layer in list(QgsProject.instance().mapLayers().items()):
@@ -676,19 +694,20 @@ class catasto_gml_merger:
                 log_message("Nessuna directory temporanea da pulire")
 
             # Resetta l'interfaccia
-            # self.dlg.le_folder.setFilePath(r"C:\Users\pigre\Downloads\munnizza")
-            # oppure
-            self.dlg.le_folder.setFilePath("C:/Users/pigre/Downloads/munnizza")
+            self.dlg.le_folder.setFilePath("")
             self.dlg.le_map_output.setFilePath("")
             self.dlg.le_ple_output.setFilePath("")
             self.dlg.cb_file_type.setCurrentIndex(0)
             self.dlg.cb_format.setCurrentIndex(0)
             self.dlg.cb_region.setCurrentIndex(0)
-            self.dlg.cb_province.setCurrentIndex(0)
+            self.dlg.list_provinces.clearSelection()  # Cancella le selezioni dalla lista
+            self.dlg.cb_region.setEnabled(True)
+            self.dlg.le_url.setEnabled(True)
             self.dlg.le_url.clear()
             self.dlg.text_log.clear()
+            self.dlg.setWindowTitle("CatastoIT GML Merger")
             
-            # Chiudi sempre il dialog alla fine
+            # Chiudi il dialog alla fine
             self.dlg.hide()
 
         def url_update():

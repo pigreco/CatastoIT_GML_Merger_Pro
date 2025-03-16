@@ -112,8 +112,8 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         region = self.cb_region.currentText()
         provinces = get_provinces(region)
         
-        self.cb_province.clear()
-        self.cb_province.addItems(provinces)
+        self.list_provinces.clear()
+        self.list_provinces.addItems(provinces)
 
     def cancel_operation(self):
         """Gestisce l'evento di annullamento dell'operazione in corso."""
