@@ -59,11 +59,33 @@
       </widget>
      </item>
      <item>
+      <widget class="QLabel" name="label_8">
+       <property name="text">
+        <string>Seleziona una o più Province:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QListWidget" name="list_provinces">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>40</height>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>400</width>
+         <height>20</height>
         </size>
        </property>
        <property name="toolTip">
@@ -71,6 +93,9 @@
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::MultiSelection</enum>
+       </property>
+       <property name="viewMode">
+        <enum>QListView::IconMode</enum>
        </property>
       </widget>
      </item>
@@ -107,6 +132,12 @@
    </item>
    <item row="10" column="1">
     <widget class="QPushButton" name="btn_close">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
      <property name="styleSheet">
       <string>background-color:rgb(185, 132, 88); color: white; font-weight: bold;</string>
      </property>
@@ -162,7 +193,7 @@
    <item row="2" column="0">
     <widget class="QLabel" name="label_3">
      <property name="text">
-      <string>Regione/Provincia:</string>
+      <string>Regione:</string>
      </property>
     </widget>
    </item>
