@@ -711,7 +711,7 @@ class catasto_gml_merger:
 
                 if inputs["file_type"] in ["Particelle (PLE)", "Entrambi"] and ple_count > 0 and self.processing_active:
                     log_message("\nUnione files PLE\n")
-                    log_message("<span style='color:blue;font-weight:bold;'>Attendere prego, operazione costosa! (potrebbe durare alcuni minuti)</span>")
+                    log_message("<span style='color:blue;font-weight:bold;'>Attendere prego, operazione costosa!</span>")
                     ple_time = merge_files(
                         ple_folder, inputs["ple_output"], "PLE", inputs
                     )
