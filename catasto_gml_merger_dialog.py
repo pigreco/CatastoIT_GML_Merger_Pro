@@ -27,6 +27,7 @@ import os
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtWidgets import QProgressBar, QPushButton
+from qgis.PyQt.QtGui import QIcon
 from .regions import REGIONS, get_provinces
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
@@ -51,6 +52,9 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
             self.btn_cancel.setVisible(False)
             self.btn_cancel.clicked.connect(self.cancel_operation)
             self.layout().addWidget(self.btn_cancel)
+            
+        # Configura il pulsante per mostrare/nascondere la guida
+        self.btn_toggle_help.clicked.connect(self.toggle_help_panel)
         
         # Popola il combobox delle regioni
         self.populate_regions()
@@ -136,3 +140,14 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         # A operazione completata
         self.progressBar.setVisible(False)
         self.btn_cancel.setVisible(False)
+        
+    def toggle_help_panel(self):
+        """Gestisce la visualizzazione/nascondimento del pannello della guida."""
+        if self.help_browser.isVisible():
+            self.help_browser.hide()
+            self.btn_toggle_help.setIcon(QIcon(":/qt-project.org/styles/commonstyle/images/right-32.png"))
+            self.btn_toggle_help.setToolTip("Mostra guida")
+        else:
+            self.help_browser.show()
+            self.btn_toggle_help.setIcon(QIcon(":/qt-project.org/styles/commonstyle/images/left-32.png"))
+            self.btn_toggle_help.setToolTip("Nascondi guida")

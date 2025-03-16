@@ -21,27 +21,30 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant, Qt
+# -- Import moduli standard Python --
+import gc
+import io
+import os
+import os.path
+import shutil
+import tempfile
+import time
+import urllib.request
+from datetime import datetime, timedelta
+from zipfile import ZipFile
+
+# -- Import moduli di terze parti --
+from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator, QVariant, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QApplication, QListWidget
-from qgis.core import Qgis, QgsVectorLayer, QgsProject, QgsMessageLog, QgsField
+from qgis.core import Qgis, QgsField, QgsMessageLog, QgsProject, QgsVectorLayer
+import processing
 
+# -- Import moduli locali del progetto --
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
 from .catasto_gml_merger_dialog import catasto_gml_mergerDialog
-import os.path
-
-import os
-import tempfile
-import shutil
-import urllib.request
-from zipfile import ZipFile
-import processing
-import time
-import gc
-from datetime import datetime, timedelta
-import io  # Aggiungilo alle altre importazioni all'inizio del file
 
 directory_temporanea = ""                
 
