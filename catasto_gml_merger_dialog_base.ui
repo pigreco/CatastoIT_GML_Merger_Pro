@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>897</width>
+    <width>660</width>
     <height>587</height>
    </rect>
   </property>
@@ -91,8 +91,17 @@
        <property name="toolTip">
         <string>Seleziona una o più province (CTRL+clic per selezione multipla)</string>
        </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(170, 255, 127); </string>
+       </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::MultiSelection</enum>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
        </property>
        <property name="viewMode">
         <enum>QListView::IconMode</enum>
@@ -130,26 +139,6 @@
      </property>
     </widget>
    </item>
-   <item row="10" column="1">
-    <widget class="QPushButton" name="btn_close">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="styleSheet">
-      <string>background-color:rgb(185, 132, 88); color: white; font-weight: bold;</string>
-     </property>
-     <property name="text">
-      <string>Pulisci File Temporanei e Chiudi</string>
-     </property>
-     <property name="icon">
-      <iconset>
-       <normaloff>:/images/themes/default/console/iconClearConsole.svg</normaloff>:/images/themes/default/console/iconClearConsole.svg</iconset>
-     </property>
-    </widget>
-   </item>
    <item row="10" column="0">
     <widget class="QPushButton" name="btn_process">
      <property name="minimumSize">
@@ -167,6 +156,12 @@
      <property name="icon">
       <iconset>
        <normaloff>:/qt-project.org/styles/commonstyle/images/down-16.png</normaloff>:/qt-project.org/styles/commonstyle/images/down-16.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>30</width>
+       <height>30</height>
+      </size>
      </property>
     </widget>
    </item>
@@ -223,6 +218,41 @@
        <string>Particelle (PLE)</string>
       </property>
      </item>
+    </widget>
+   </item>
+   <item row="10" column="1" alignment="Qt::AlignRight">
+    <widget class="QPushButton" name="btn_close">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>500</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="styleSheet">
+      <string>background-color:rgb(185, 132, 88); color: white; font-weight: bold;</string>
+     </property>
+     <property name="text">
+      <string>Pulisci File Temporanei e Chiudi</string>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>:/images/themes/default/console/iconClearConsole.svg</normaloff>:/images/themes/default/console/iconClearConsole.svg</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>25</width>
+       <height>25</height>
+      </size>
+     </property>
     </widget>
    </item>
    <item row="8" column="0" colspan="2">

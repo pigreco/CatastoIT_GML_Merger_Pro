@@ -41,6 +41,7 @@ import processing
 import time
 import gc
 from datetime import datetime, timedelta
+import io  # Aggiungilo alle altre importazioni all'inizio del file
 
 directory_temporanea = ""                
 
@@ -500,6 +501,7 @@ class catasto_gml_merger:
 
         def process_gml_files():
             global directory_temporanea
+            temp_dir = None
             
             # Imposta il cursore di attesa
             QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -511,150 +513,178 @@ class catasto_gml_merger:
                     QApplication.restoreOverrideCursor()
                     return
                 
-                # Creiamo una nuova directory temporanea
+                # Creiamo una directory temporanea minima
                 temp_dir = tempfile.mkdtemp()
                 directory_temporanea = temp_dir
-                self.dlg.setWindowTitle("CatastoIT GML Merger")
+                self.dlg.setWindowTitle("CatastoIT GML Merger - Elaborazione in corso")
                 
-                try:
-                    # Crea le cartelle di output per i file GML
-                    if "map_output" in inputs:
-                        map_folder = os.path.join(temp_dir, "map_files")
-                        os.makedirs(map_folder, exist_ok=True)
-                    
-                    if "ple_output" in inputs:
-                        ple_folder = os.path.join(temp_dir, "ple_files")
-                        os.makedirs(ple_folder, exist_ok=True)
-                    
-                    # Download e estrazione
-                    log_message(f"Cartelle create in: {temp_dir}\n")
-                    log_message("Download del file zip...\n")
-                    zip_path = os.path.join(temp_dir, "downloaded.zip")
-                    urllib.request.urlretrieve(inputs["url"], zip_path)
+                # Crea le cartelle di output per i file GML solo al bisogno
+                map_folder = os.path.join(temp_dir, "map_files")
+                ple_folder = os.path.join(temp_dir, "ple_files")
+                
+                if inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
+                    os.makedirs(map_folder, exist_ok=True)
+                
+                if inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
+                    os.makedirs(ple_folder, exist_ok=True)
+                
+                # Download del file zip principale
+                log_message(f"Directory temporanea creata: {temp_dir}\n")
+                log_message("Download del file zip principale...\n")
+                
+                main_zip_path = os.path.join(temp_dir, "downloaded.zip")
+                urllib.request.urlretrieve(inputs["url"], main_zip_path)
 
-                    log_message("Estrazione province...\n")
-                    with ZipFile(zip_path, "r") as zip_ref:
-                        zip_ref.extractall(temp_dir)
-                    
-                    province_zips = [
-                        f
-                        for f in os.listdir(temp_dir)
-                        if f.endswith(".zip") and f != "downloaded.zip"
-                    ]
+                # Filtra per provincia
+                province_codes = [p.strip().upper() for p in inputs['province_code'].split(',')]
+                log_message(f"Province selezionate: {', '.join(province_codes)}")
+                
+                # Modifica il nome dell'output con tutti i codici provincia
+                province_suffix = "_".join(province_codes)
+                if inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
+                    base_name = os.path.splitext(inputs["map_output"])[0]
+                    ext = os.path.splitext(inputs["map_output"])[1]
+                    inputs["map_output"] = f"{base_name}_{province_suffix}{ext}"
+                    log_message(f"Output MAP aggiornato: {inputs['map_output']}")
+                
+                if inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
+                    base_name = os.path.splitext(inputs["ple_output"])[0]
+                    ext = os.path.splitext(inputs["ple_output"])[1]
+                    inputs["ple_output"] = f"{base_name}_{province_suffix}{ext}"
+                    log_message(f"Output PLE aggiornato: {inputs['ple_output']}")
 
-                    # Filtro per provincia - modificato per supportare più province
-                    province_code = inputs['province_code']
-                    # Dividi il codice provincia in una lista se contiene virgole
-                    province_codes = [p.strip().upper() for p in province_code.split(',')]
+                # Contatori per i file
+                ple_count = map_count = 0
+                
+                # Usa un buffer di memoria per i nomi dei file estratti per evitare duplicazioni
+                extracted_files = set()
+                
+                # Gestione dei file ZIP annidati
+                log_message("Elaborazione file...")
+                with ZipFile(main_zip_path, "r") as main_zip:
+                    # Estrai solo l'elenco dei file, non il contenuto
+                    province_zips = [f for f in main_zip.namelist() if f.endswith('.zip')]
                     
-                    log_message(f"Province selezionate: {', '.join(province_codes)}")
-                    
+                    # Filtra per province selezionate
                     filtered_province_zips = []
                     for prov_zip in province_zips:
-                        # Verifica se il nome del file contiene uno dei codici provincia
+                        prov_name = os.path.basename(prov_zip)
                         for code in province_codes:
-                            if code in prov_zip.upper():
+                            if code in prov_name.upper():
                                 filtered_province_zips.append(prov_zip)
-                                log_message(f"Provincia selezionata: {prov_zip}")
+                                log_message(f"Provincia trovata: {prov_name}")
                                 break
                     
                     if not filtered_province_zips:
-                        log_message(f"ATTENZIONE: Nessuna provincia trovata con i codici '{province_code}'")
+                        log_message(f"ATTENZIONE: Nessuna provincia trovata con i codici '{inputs['province_code']}'")
                         log_message("Controlla che i codici provincia siano corretti e riprova")
                         return
                     
-                    province_zips = filtered_province_zips
-                    
-                    # Modifica il nome dell'output con tutti i codici provincia
-                    province_suffix = "_".join(province_codes)
-                    if inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
-                        base_name = os.path.splitext(inputs["map_output"])[0]
-                        ext = os.path.splitext(inputs["map_output"])[1]
-                        inputs["map_output"] = f"{base_name}_{province_suffix}{ext}"
-                        log_message(f"Output MAP aggiornato: {inputs['map_output']}")
-                    
-                    if inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
-                        base_name = os.path.splitext(inputs["ple_output"])[0]
-                        ext = os.path.splitext(inputs["ple_output"])[1]
-                        inputs["ple_output"] = f"{base_name}_{province_suffix}{ext}"
-                        log_message(f"Output PLE aggiornato: {inputs['ple_output']}")
-
-                    # Estrai tutti i file GML
-                    log_message("Estrazione di tutti i file GML...")
-                    for prov_zip in province_zips:
-                        log_message(f"Elaborazione provincia: {prov_zip}")
-                        prov_path = os.path.join(temp_dir, prov_zip)
-                        prov_dir = os.path.join(temp_dir, os.path.splitext(prov_zip)[0])
-
-                        with ZipFile(prov_path, "r") as zip_ref:
-                            zip_ref.extractall(prov_dir)
-                        comuni_zips = [
-                            f for f in os.listdir(prov_dir) if f.endswith(".zip")
-                        ]
-                                                                                                 
-                        for com_zip in comuni_zips:
-                            log_message(f"Elaborazione comune: {com_zip}")
-                            com_path = os.path.join(prov_dir, com_zip)
-                            com_dir = os.path.join(prov_dir, os.path.splitext(com_zip)[0])
-                            with ZipFile(com_path, "r") as zip_ref:
-                                zip_ref.extractall(com_dir)
-
-                    # Conta e sposta i file GML
-                    ple_count = map_count = 0
-                    for root, dirs, files in os.walk(temp_dir):
-                        for file in files:
-                            if file.endswith(".gml"):
-                                file_path = os.path.join(root, file)
-                                if "ple_output" in inputs and "_ple" in file.lower():
-                                    shutil.move(file_path, os.path.join(ple_folder, file))
-                                    ple_count += 1
-                                elif "map_output" in inputs and "_map" in file.lower():
-                                    shutil.move(file_path, os.path.join(map_folder, file))
-                                    map_count += 1
+                    # Processa ogni provincia selezionata
+                    for prov_zip_path in filtered_province_zips:
+                        prov_name = os.path.basename(prov_zip_path)
+                        log_message(f"Elaborazione provincia: {prov_name}")
+                        
+                        # Estrai il file ZIP della provincia in un BytesIO per processarlo in memoria
+                        with main_zip.open(prov_zip_path) as prov_zip_file:
+                            prov_zip_data = io.BytesIO(prov_zip_file.read())
                             
-                    log_message(f"\nFile trovati: {ple_count} PLE, {map_count} MAP")
-                    
-                    # Solo un'operazione di unione per tipo di file
-                    processing_times = {}
+                            with ZipFile(prov_zip_data) as prov_zip:
+                                comuni_zips = [f for f in prov_zip.namelist() if f.endswith('.zip')]
+                                
+                                # Calcola il totale dei comuni per la barra di progresso
+                                total_comuni = len(comuni_zips)
+                                processed_comuni = 0
+                                
+                                for com_zip_path in comuni_zips:
+                                    com_name = os.path.basename(com_zip_path)
+                                    processed_comuni += 1
+                                    
+                                    # Aggiorna l'interfaccia ogni 10 comuni o all'ultimo
+                                    if processed_comuni % 10 == 0 or processed_comuni == total_comuni:
+                                        log_message(f"Elaborazione comune {processed_comuni}/{total_comuni}: {com_name}")
+                                        QCoreApplication.processEvents()
+                                    
+                                    # Estrai il file ZIP del comune in un BytesIO
+                                    with prov_zip.open(com_zip_path) as com_zip_file:
+                                        com_zip_data = io.BytesIO(com_zip_file.read())
+                                        
+                                        with ZipFile(com_zip_data) as com_zip:
+                                            gml_files = [f for f in com_zip.namelist() if f.endswith('.gml')]
+                                            
+                                            # Estrai solo i file GML richiesti
+                                            for gml_file in gml_files:
+                                                file_name = os.path.basename(gml_file)
+                                                
+                                                # Verifica se il file è già stato estratto (evita duplicati)
+                                                if file_name in extracted_files:
+                                                    continue
+                                                    
+                                                # Verifica il tipo di file e se è richiesto
+                                                is_ple = "_ple" in file_name.lower()
+                                                is_map = "_map" in file_name.lower()
+                                                
+                                                if (is_ple and inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]) or \
+                                                   (is_map and inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]):
+                                                    
+                                                    # Determina la cartella di destinazione
+                                                    dest_folder = ple_folder if is_ple else map_folder
+                                                    dest_path = os.path.join(dest_folder, file_name)
+                                                    
+                                                    # Estrai il file nella cartella appropriata
+                                                    with com_zip.open(gml_file) as source, \
+                                                         open(dest_path, 'wb') as target:
+                                                        shutil.copyfileobj(source, target)
+                                                    
+                                                    # Aggiorna contatori
+                                                    if is_ple:
+                                                        ple_count += 1
+                                                    else:
+                                                        map_count += 1
+                                                    
+                                                    # Aggiungi al set per evitare duplicati
+                                                    extracted_files.add(file_name)
+                
+                log_message(f"\nFile estratti: {ple_count} PLE, {map_count} MAP")
+                
+                # Libera memoria
+                extracted_files.clear()
+                gc.collect()
+                
+                # Esegui l'unione dei file
+                processing_times = {}
 
-                    # Esegui l'unione una sola volta per tipo di file
-                    if inputs["file_type"] in ["Mappe (MAP)", "Entrambi"] and map_count > 0:
-                        log_message("\nUnione files MAP\n")
-                        map_time = merge_files(
-                            map_folder, inputs["map_output"], "MAP", inputs
-                        )
-                        if map_time:
-                            processing_times["MAP"] = map_time
+                # Esegui l'unione una sola volta per tipo di file
+                if inputs["file_type"] in ["Mappe (MAP)", "Entrambi"] and map_count > 0:
+                    log_message("\nUnione files MAP\n")
+                    map_time = merge_files(
+                        map_folder, inputs["map_output"], "MAP", inputs
+                    )
+                    if map_time:
+                        processing_times["MAP"] = map_time
 
-                    if inputs["file_type"] in ["Particelle (PLE)", "Entrambi"] and ple_count > 0:
-                        log_message("\nUnione files PLE\n")
-                        ple_time = merge_files(
-                            ple_folder, inputs["ple_output"], "PLE", inputs
-                        )
-                        if ple_time:
-                            processing_times["PLE"] = ple_time 
+                if inputs["file_type"] in ["Particelle (PLE)", "Entrambi"] and ple_count > 0:
+                    log_message("\nUnione files PLE\n")
+                    ple_time = merge_files(
+                        ple_folder, inputs["ple_output"], "PLE", inputs
+                    )
+                    if ple_time:
+                        processing_times["PLE"] = ple_time 
 
-                    log_message("\nElaborazione completata!")
-                    if "map_output" in inputs and map_count > 0:
-                        log_message(f"File MAP salvato in: {inputs['map_output']}")
-                    if "ple_output" in inputs and ple_count > 0:
-                        log_message(f"File PLE salvato in: {inputs['ple_output']}")
-                            
-                    log_message("\nTempi di elaborazione:")
-                    for file_type, proc_time in processing_times.items():
-                        if proc_time:
-                            minutes = proc_time.total_seconds() / 60
-                            log_message(f"Merge {file_type}: {minutes:.2f} minuti")
-                            
-                except Exception as e:
-                    log_message(f"\nSi è verificato un errore durante l'elaborazione: {str(e)}")
-                    import traceback
-                    log_message(f"\nDettagli errore:\n{traceback.format_exc()}")
-                    if temp_dir:
-                        directory_temporanea = temp_dir  # Assegna anche in caso di errore
+                log_message("\nElaborazione completata!")
+                if "map_output" in inputs and map_count > 0:
+                    log_message(f"File MAP salvato in: {inputs['map_output']}")
+                if "ple_output" in inputs and ple_count > 0:
+                    log_message(f"File PLE salvato in: {inputs['ple_output']}")
+                        
+                log_message("\nTempi di elaborazione:")
+                for file_type, proc_time in processing_times.items():
+                    if proc_time:
+                        minutes = proc_time.total_seconds() / 60
+                        log_message(f"Merge {file_type}: {minutes:.2f} minuti")
+                        
             except Exception as e:
                 log_message(f"\nSi è verificato un errore durante l'elaborazione: {str(e)}")
-                # Registra informazioni più dettagliate per il debug
                 import traceback
                 log_message(f"\nDettagli errore:\n{traceback.format_exc()}")
                 if temp_dir:
@@ -712,7 +742,6 @@ class catasto_gml_merger:
 
         def url_update():
             self.dlg.le_url.setText("https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/GetDataset.php?dataset=" + self.dlg.cb_region.currentText() + ".zip")
-            pass       
             
         def aggiorna_campi_output():
             """Attiva o disattiva i campi di output in base al tipo di file selezionato"""
