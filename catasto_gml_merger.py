@@ -223,6 +223,11 @@ class catasto_gml_merger:
             inputs['main_folder'] = self.dlg.le_folder.filePath()
             print(inputs['main_folder'])
             
+            # Verifica che sia stata selezionata una cartella di lavoro
+            if not inputs['main_folder']:
+                log_message("ERRORE: Nessuna cartella di lavoro selezionata")
+                return None
+            
             inputs['url'] = self.dlg.le_url.text()
             print(inputs['url'])
             
@@ -395,24 +400,29 @@ class catasto_gml_merger:
                         particella_idx = output_layer.fields().indexFromName("particella") if file_type == "PLE" else -1
                         gml_id_idx = output_layer.fields().indexFromName("gml_id")
                         
-                        # Approccio a buffer per modifiche più veloci
+                        # Calcola valori una sola volta
+                        needs_particella = file_type == "PLE" and particella_idx >= 0
+                        
+                        # Inizializza il buffer per le modifiche prima di usarlo
                         changes_buffer = {}
                         
                         # Usa una singola passata per elaborare tutti i dati
                         for feature in output_layer.getFeatures():
                             feature_id = feature.id()
                             gml_id = feature[gml_id_idx]
-                            changes_buffer[feature_id] = {}
                             
-                            # Estrai foglio (posizioni 32-36)
+                            # Estrai foglio (posizioni 32-36) con controllo più efficiente
                             if len(gml_id) > 36:
                                 foglio = gml_id[32:36]
-                                changes_buffer[feature_id][foglio_idx] = foglio
-                            
-                            # Estrai particella per PLE (dalla posizione 39 in poi)
-                            if file_type == "PLE" and particella_idx >= 0 and len(gml_id) > 39:
-                                particella = gml_id[39:]
-                                changes_buffer[feature_id][particella_idx] = particella
+                                changes_buffer[feature_id] = {foglio_idx: foglio}
+                                
+                                # Estrai particella per PLE (dalla posizione 39 in poi)
+                                # solo se necessario e se la stringa è abbastanza lunga
+                                if needs_particella and len(gml_id) > 39:
+                                    particella = gml_id[39:]
+                                    changes_buffer[feature_id][particella_idx] = particella
+                        
+                        # Rimosso il secondo ciclo duplicato che faceva lo stesso lavoro
                         
                         # Applica tutte le modifiche in batch
                         batch_size = 5000  # Dimensione del batch per evitare operazioni troppo grandi
@@ -507,10 +517,23 @@ class catasto_gml_merger:
             QApplication.setOverrideCursor(Qt.WaitCursor)
             
             try:
+                # Inizializza lo stato di elaborazione
+                self.processing_active = True
+                
+                # Abilita il pulsante di stop e disabilita quello di processo
+                self.dlg.btn_stop.setEnabled(True)
+                self.dlg.btn_process.setEnabled(False)
+                
+                # Inizializza la progress bar
+                self.dlg.progressBar.setValue(0)
+                self.dlg.progressBar.setVisible(True)
+                
                 inputs = collect_inputs()
-                if not inputs:
+                if not inputs or not self.processing_active:
                     log_message("Operazione annullata")
                     QApplication.restoreOverrideCursor()
+                    self.dlg.progressBar.setVisible(False)
+                    self.reset_processing_state()
                     return
                 
                 # Creiamo una directory temporanea minima
@@ -532,8 +555,12 @@ class catasto_gml_merger:
                 log_message(f"Directory temporanea creata: {temp_dir}\n")
                 log_message("Download del file zip principale...\n")
                 
+                self.dlg.progressBar.setValue(5)  # 5% dopo inizializzazione
+                
                 main_zip_path = os.path.join(temp_dir, "downloaded.zip")
                 urllib.request.urlretrieve(inputs["url"], main_zip_path)
+                
+                self.dlg.progressBar.setValue(15)  # 15% dopo download
 
                 # Filtra per provincia
                 province_codes = [p.strip().upper() for p in inputs['province_code'].split(',')]
@@ -561,6 +588,9 @@ class catasto_gml_merger:
                 
                 # Gestione dei file ZIP annidati
                 log_message("Elaborazione file...")
+                
+                self.dlg.progressBar.setValue(20)  # 20% prima dell'estrazione
+                
                 with ZipFile(main_zip_path, "r") as main_zip:
                     # Estrai solo l'elenco dei file, non il contenuto
                     province_zips = [f for f in main_zip.namelist() if f.endswith('.zip')]
@@ -578,10 +608,18 @@ class catasto_gml_merger:
                     if not filtered_province_zips:
                         log_message(f"ATTENZIONE: Nessuna provincia trovata con i codici '{inputs['province_code']}'")
                         log_message("Controlla che i codici provincia siano corretti e riprova")
+                        self.dlg.progressBar.setVisible(False)
                         return
                     
                     # Processa ogni provincia selezionata
-                    for prov_zip_path in filtered_province_zips:
+                    total_provinces = len(filtered_province_zips)
+                    
+                    for idx, prov_zip_path in enumerate(filtered_province_zips):
+                        prov_progress_base = 20  # Iniziamo dal 20%
+                        prov_progress_range = 30  # Le province coprono il 30% dell'avanzamento totale
+                        prov_progress = prov_progress_base + (idx / total_provinces) * prov_progress_range
+                        self.dlg.progressBar.setValue(int(prov_progress))
+                        
                         prov_name = os.path.basename(prov_zip_path)
                         log_message(f"Elaborazione provincia: {prov_name}")
                         
@@ -597,11 +635,17 @@ class catasto_gml_merger:
                                 processed_comuni = 0
                                 
                                 for com_zip_path in comuni_zips:
+                                    if not self.processing_active:
+                                        log_message("Elaborazione interrotta dall'utente")
+                                        break
+                                    
                                     com_name = os.path.basename(com_zip_path)
                                     processed_comuni += 1
                                     
-                                    # Aggiorna l'interfaccia ogni 10 comuni o all'ultimo
+                                    # Calcola progresso per i comuni all'interno della provincia
+                                    comuni_progress = prov_progress + (processed_comuni / total_comuni) * (prov_progress_range / total_provinces)
                                     if processed_comuni % 10 == 0 or processed_comuni == total_comuni:
+                                        self.dlg.progressBar.setValue(int(comuni_progress))
                                         log_message(f"Elaborazione comune {processed_comuni}/{total_comuni}: {com_name}")
                                         QCoreApplication.processEvents()
                                     
@@ -646,6 +690,7 @@ class catasto_gml_merger:
                                                     extracted_files.add(file_name)
                 
                 log_message(f"\nFile estratti: {ple_count} PLE, {map_count} MAP")
+                self.dlg.progressBar.setValue(50)  # 50% dopo estrazione
                 
                 # Libera memoria
                 extracted_files.clear()
@@ -655,23 +700,33 @@ class catasto_gml_merger:
                 processing_times = {}
 
                 # Esegui l'unione una sola volta per tipo di file
-                if inputs["file_type"] in ["Mappe (MAP)", "Entrambi"] and map_count > 0:
+                if inputs["file_type"] in ["Mappe (MAP)", "Entrambi"] and map_count > 0 and self.processing_active:
                     log_message("\nUnione files MAP\n")
                     map_time = merge_files(
                         map_folder, inputs["map_output"], "MAP", inputs
                     )
+                    self.dlg.progressBar.setValue(75)  # 75% dopo unione MAP
                     if map_time:
                         processing_times["MAP"] = map_time
 
-                if inputs["file_type"] in ["Particelle (PLE)", "Entrambi"] and ple_count > 0:
+                if inputs["file_type"] in ["Particelle (PLE)", "Entrambi"] and ple_count > 0 and self.processing_active:
                     log_message("\nUnione files PLE\n")
+                    log_message("<span style='color:blue;font-weight:bold;'>Attendere prego, operazione costosa! (potrebbe durare alcuni minuti)</span>")
                     ple_time = merge_files(
                         ple_folder, inputs["ple_output"], "PLE", inputs
                     )
+                    # Se abbiamo già elaborato MAP arriviamo al 100%, altrimenti al 75%
+                    if inputs["file_type"] == "Entrambi":
+                        self.dlg.progressBar.setValue(100)
+                    else:
+                        self.dlg.progressBar.setValue(75)
+                        
                     if ple_time:
                         processing_times["PLE"] = ple_time 
 
                 log_message("\nElaborazione completata!")
+                self.dlg.progressBar.setValue(100)  # 100% a elaborazione completata
+                
                 if "map_output" in inputs and map_count > 0:
                     log_message(f"File MAP salvato in: {inputs['map_output']}")
                 if "ple_output" in inputs and ple_count > 0:
@@ -690,12 +745,17 @@ class catasto_gml_merger:
                 if temp_dir:
                     directory_temporanea = temp_dir  # Assegna anche in caso di errore
             finally:
-                # Ripristina il cursore normale
+                # Ripristina lo stato dell'interfaccia
+                self.reset_processing_state()
                 QApplication.restoreOverrideCursor()
 
         def pulisci_temporanea():
             global directory_temporanea
             dir_path = directory_temporanea
+            
+            # Reset della progress bar
+            self.dlg.progressBar.setValue(0)
+            self.dlg.progressBar.setVisible(False)
             
             if dir_path and os.path.exists(dir_path):
                 # Libera tutti i layer che potrebbero usare file nella directory temporanea
@@ -759,6 +819,23 @@ class catasto_gml_merger:
         self.dlg.cb_file_type.currentIndexChanged.connect(aggiorna_campi_output)                                                       
         self.dlg.btn_process.clicked.connect(process_gml_files)
         self.dlg.btn_close.clicked.connect(pulisci_temporanea)
+        self.dlg.btn_stop.clicked.connect(self.stop_processing)  # Ora funzionerà correttamente
+        self.dlg.btn_stop.setEnabled(False)  # Disabilitato all'avvio
         
         # Imposta lo stato iniziale dei campi di output
         aggiorna_campi_output()
+
+    def stop_processing(self):
+        """Interrompe il processo di elaborazione in corso"""
+        if self.processing_active:
+            self.processing_active = False
+            # Utilizziamo la funzione log_message definita nel contesto di run()
+            self.dlg.text_log.append("\n<span style='color:red;font-weight:bold;'>Interruzione richiesta dall'utente...</span>")
+            self.dlg.text_log.append("L'elaborazione verrà interrotta appena possibile")
+            self.dlg.btn_stop.setEnabled(False)
+    
+    def reset_processing_state(self):
+        """Ripristina lo stato dell'interfaccia dopo l'elaborazione"""
+        self.processing_active = False
+        self.dlg.btn_stop.setEnabled(False)
+        self.dlg.btn_process.setEnabled(True)
