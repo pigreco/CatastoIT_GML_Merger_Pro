@@ -482,6 +482,9 @@
      <property name="frameShape">
       <enum>QFrame::Box</enum>
      </property>
+     <property name="openExternalLinks">
+      <bool>true</bool>
+     </property>
      <property name="html">
       <string>&lt;html&gt;&lt;head&gt;&lt;style&gt;
       h1 {font-size: 16px; color: #3d8640;}
@@ -521,7 +524,7 @@
       
       &lt;p&gt;&lt;b&gt;Nota:&lt;/b&gt; I dati scaricati saranno salvati nella cartella di lavoro.&lt;/p&gt;
 
-      &lt;p&gt;&lt;b&gt;EPSG:&lt;/b&gt; RDN2008-6706&lt;/p&gt;
+      &lt;p&gt;&lt;b&gt;EPSG:&lt;/b&gt; 6706&lt;/p&gt;
 
       &lt;p&gt;&lt;b&gt;Dati:&lt;/b&gt; &lt;a href="https://geodati.gov.it/geoportale/visualizzazione-metadati/scheda-metadati/?uuid=age:S_0000_ITALIA"&gt;Agenzia delle Entrate CC BY 4.0&lt;/a&gt;&lt;/p&gt;
       &lt;/body&gt;&lt;/html&gt;</string>
