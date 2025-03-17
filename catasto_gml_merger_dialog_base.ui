@@ -95,6 +95,9 @@
          <height>30</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>Pulisce dai file temporanei e Chiude finestra.</string>
+       </property>
        <property name="layoutDirection">
         <enum>Qt::LeftToRight</enum>
        </property>
@@ -124,6 +127,9 @@
          <height>16777215</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>Ferma elaborazione in corso!</string>
+       </property>
        <property name="layoutDirection">
         <enum>Qt::LeftToRight</enum>
        </property>
@@ -143,16 +149,23 @@
       <layout class="QHBoxLayout" name="horizontalLayout_2"/>
      </item>
      <item row="7" column="1">
-      <widget class="QLabel" name="label">
+      <widget class="QLabel" name="labelAutori">
        <property name="font">
         <font>
+         <pointsize>8</pointsize>
          <weight>50</weight>
          <italic>true</italic>
          <bold>false</bold>
         </font>
        </property>
+       <property name="toolTip">
+        <string>Autori del plugin</string>
+       </property>
        <property name="text">
-        <string>Autori: &lt;b&gt;Totò Fiandaca&lt;/b&gt; e &lt;b&gt;Giulio Fattori&lt;/b&gt;  </string>
+        <string>AUTORI: &lt;b&gt;Totò Fiandaca&lt;/b&gt; e &lt;b&gt;Giulio Fattori &lt;/b&gt;</string>
+       </property>
+       <property name="textFormat">
+        <enum>Qt::AutoText</enum>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -234,6 +247,9 @@
          <height>40</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>Lancia elaborazione</string>
+       </property>
        <property name="styleSheet">
         <string>background-color:rgba(61, 134, 64, 0.64); color: white; font-weight: bold;</string>
        </property>
@@ -242,7 +258,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>:/qt-project.org/styles/commonstyle/images/down-16.png</normaloff>:/qt-project.org/styles/commonstyle/images/down-16.png</iconset>
+         <normaloff>:/images/themes/default/downloading_svg.svg</normaloff>:/images/themes/default/downloading_svg.svg</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -355,14 +371,14 @@
        </property>
        <property name="fileWidgetButtonIcon" stdset="0">
         <iconset>
-         <normaloff>:/qt-project.org/styles/commonstyle/images/standardbutton-open-16.png</normaloff>:/qt-project.org/styles/commonstyle/images/standardbutton-open-16.png</iconset>
+         <normaloff>:/qt-project.org/styles/commonstyle/images/newdirectory-128.png</normaloff>:/qt-project.org/styles/commonstyle/images/newdirectory-128.png</iconset>
        </property>
       </widget>
      </item>
      <item row="3" column="1">
       <widget class="QLineEdit" name="le_url">
        <property name="toolTip">
-        <string>URL del file ZIP</string>
+        <string>URL del file ZIP su RNDT</string>
        </property>
        <property name="readOnly">
         <bool>true</bool>
@@ -386,7 +402,7 @@
      <item row="0" column="1">
       <widget class="QComboBox" name="cb_file_type">
        <property name="toolTip">
-        <string>Seleziona il tipo di file da unire (solo Fogli o solo particelle)</string>
+        <string>Seleziona il tipo di file da unire (solo Fogli o solo particelle o Entrambi)</string>
        </property>
        <property name="currentText">
         <string>Entrambi</string>
@@ -466,6 +482,9 @@
        <height>16777215</height>
       </size>
      </property>
+     <property name="toolTip">
+      <string>Guida al Plugin</string>
+     </property>
      <property name="styleSheet">
       <string notr="true">background-color: #f5f5f5;</string>
      </property>
@@ -473,7 +492,11 @@
       <enum>QFrame::Box</enum>
      </property>
      <property name="html">
-      <string></string>
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="openExternalLinks">
       <bool>true</bool>
