@@ -28,6 +28,7 @@ from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtWidgets import QProgressBar, QPushButton
 from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtCore import Qt
 from .regions import REGIONS, get_provinces
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
@@ -40,6 +41,9 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         """Constructor."""
         super(catasto_gml_mergerDialog, self).__init__(parent)
         self.setupUi(self)
+        
+        # Aggiungi il pulsante di minimizzazione
+        self.setWindowFlags(self.windowFlags() | Qt.WindowMinimizeButtonHint)
         
         # Aggiungi ProgressBar e pulsante di annullamento
         if not hasattr(self, 'progressBar'):
