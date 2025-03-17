@@ -56,7 +56,14 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
             self.btn_cancel.setVisible(False)
             self.btn_cancel.clicked.connect(self.cancel_operation)
             self.layout().addWidget(self.btn_cancel)
-            
+        
+        # Imposta il placeholder per il widget di selezione cartella
+        self.le_folder.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\munnizza")
+        # Aggiungi placeholders agli altri widget di selezione file
+        self.le_map_output.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\munnizza\\mappe.gpkg")
+        self.le_ple_output.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\munnizza\\particella.gpkg")
+        self.le_url.setPlaceholderText("ES: https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/GetDataset.php?dataset=SICILIA.zip")
+        
         # Configura il pulsante per mostrare/nascondere la guida
         self.btn_toggle_help.clicked.connect(self.toggle_help_panel)
         
@@ -88,6 +95,9 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         
         # Chiamare questo metodo durante l'inizializzazione del dialogo
         self.setup_help_content()
+        
+        # Aggiorna la lista delle province all'apertura con la regione predefinita
+        self.update_provinces()
         
     def closeEvent(self, event):
         # dir_path = directory_temporanea

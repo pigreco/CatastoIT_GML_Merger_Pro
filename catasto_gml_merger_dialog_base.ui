@@ -234,7 +234,7 @@
        </property>
        <item>
         <property name="text">
-         <string>GPKG</string>
+         <string>GPKG (GeoPackage)</string>
         </property>
        </item>
       </widget>
@@ -405,14 +405,14 @@
         <string>Seleziona il tipo di file da unire (solo Fogli o solo particelle o Entrambi)</string>
        </property>
        <property name="currentText">
-        <string>Entrambi</string>
+        <string>Entrambi (MAP e PLE)</string>
        </property>
        <property name="maxVisibleItems">
         <number>3</number>
        </property>
        <item>
         <property name="text">
-         <string>Entrambi</string>
+         <string>Entrambi (MAP e PLE)</string>
         </property>
        </item>
        <item>
