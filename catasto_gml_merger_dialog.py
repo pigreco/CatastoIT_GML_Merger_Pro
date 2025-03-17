@@ -86,6 +86,9 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         # Connetti il cambio di regione all'aggiornamento delle province
         self.cb_region.currentTextChanged.connect(self.update_provinces)
         
+        # Chiamare questo metodo durante l'inizializzazione del dialogo
+        self.setup_help_content()
+        
     def closeEvent(self, event):
         # dir_path = directory_temporanea
 
@@ -155,3 +158,16 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
             self.help_browser.show()
             self.btn_toggle_help.setIcon(QIcon(":/qt-project.org/styles/commonstyle/images/left-32.png"))
             self.btn_toggle_help.setToolTip("Nascondi guida")
+            
+    def setup_help_content(self):
+        """Carica il contenuto della guida dal file HTML esterno"""
+        # Percorso del file HTML relativo alla posizione del plugin
+        help_file_path = os.path.join(os.path.dirname(__file__), 'help_content.html')
+        
+        # Verifica se il file esiste
+        if os.path.exists(help_file_path):
+            with open(help_file_path, 'r', encoding='utf-8') as html_file:
+                help_content = html_file.read()
+                self.help_browser.setHtml(help_content)
+        else:
+            self.help_browser.setHtml("<p>File della guida non trovato.</p>")
