@@ -23,6 +23,10 @@
    <iconset>
     <normaloff>icon.png</normaloff>icon.png</iconset>
   </property>
+  <!-- Aggiungi questa proprietà per abilitare il pulsante di minimizzazione -->
+  <property name="windowFlags">
+   <set>Qt::Dialog|Qt::WindowMinimizeButtonHint</set>
+  </property>
   <property name="toolTip">
    <string>CatastoIT_GML_Merger_Pro è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano AdE.</string>
   </property>
