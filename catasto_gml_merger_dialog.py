@@ -46,10 +46,10 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         self.setWindowFlags(self.windowFlags() | Qt.WindowMinimizeButtonHint)
         
         # Aggiungi ProgressBar e pulsante di annullamento
-        if not hasattr(self, 'progressBar'):
-            self.progressBar = QProgressBar(self)
-            self.progressBar.setVisible(False)
-            self.layout().addWidget(self.progressBar)
+        # if not hasattr(self, 'progressBar'):
+            # self.progressBar = QProgressBar(self)
+            # self.progressBar.setVisible(False)
+            # self.layout().addWidget(self.progressBar)
             
         if not hasattr(self, 'btn_cancel'):
             self.btn_cancel = QPushButton("Annulla", self)
@@ -136,27 +136,27 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         self.list_provinces.clear()
         self.list_provinces.addItems(provinces)
 
-    def cancel_operation(self):
-        """Gestisce l'evento di annullamento dell'operazione in corso."""
-        self.btn_cancel.setVisible(False)
-        self.progressBar.setVisible(False)
+    # def cancel_operation(self):
+        # """Gestisce l'evento di annullamento dell'operazione in corso."""
+        # self.btn_cancel.setVisible(False)
+        # self.progressBar.setVisible(False)
         # Aggiungi qui il codice per interrompere qualsiasi operazione in corso
-        self.text_log.append("Operazione annullata dall'utente.")
+        # self.text_log.append("Operazione annullata dall'utente.")
         
-    def example_usage(self):
-        """Esempio di utilizzo della progress bar e del pulsante di annullamento."""
-        self.progressBar.setVisible(True)
-        self.progressBar.setMinimum(0)
-        self.progressBar.setMaximum(100)
-        self.progressBar.setValue(0)
-        self.btn_cancel.setVisible(True)
+    # def example_usage(self):
+        # """Esempio di utilizzo della progress bar e del pulsante di annullamento."""
+        # self.progressBar.setVisible(False)
+        # self.progressBar.setMinimum(0)
+        # self.progressBar.setMaximum(100)
+        # self.progressBar.setValue(0)
+        # self.btn_cancel.setVisible(False)
 
         # Durante l'elaborazione
-        self.progressBar.setValue(50)  # aggiorna il valore
+        # self.progressBar.setValue(50)  # aggiorna il valore
 
         # A operazione completata
-        self.progressBar.setVisible(False)
-        self.btn_cancel.setVisible(False)
+        # self.progressBar.setVisible(False)
+        # self.btn_cancel.setVisible(False)
         
     def toggle_help_panel(self):
         """Gestisce la visualizzazione/nascondimento del pannello della guida."""

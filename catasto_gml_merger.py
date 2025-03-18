@@ -524,15 +524,15 @@ class catasto_gml_merger:
                 self.dlg.btn_process.setEnabled(False)
                 
                 # Inizializza la progress bar
-                self.dlg.progressBar.setValue(0)
-                self.dlg.progressBar.setVisible(True)
+                # self.dlg.progressBar.setValue(0)
+                # self.dlg.progressBar.setVisible(True)
                 
                 inputs = collect_inputs()
                 if not inputs:
-                    log_message("Operazione annullata")
-                    self.dlg.progressBar.setVisible(False)
+                    # log_message("Operazione annullata")
+                    # self.dlg.progressBar.setVisible(False)
                     self.reset_processing_state()
-                    return
+                    # return
                 
                 self.dlg.setWindowTitle("CatastoIT GML Merger - Elaborazione in corso")
                 
@@ -540,7 +540,7 @@ class catasto_gml_merger:
                 task = GmlProcessingTask('Elaborazione GML', inputs)
                 
                 # Connetti i segnali agli slot
-                task.progress_changed.connect(self.update_progress)
+                # task.progress_changed.connect(self.update_progress)
                 task.log_message.connect(log_message)
                 task.task_completed.connect(self.on_task_completed)
                 
@@ -561,8 +561,8 @@ class catasto_gml_merger:
             dir_path = directory_temporanea
             
             # Reset della progress bar
-            self.dlg.progressBar.setValue(0)
-            self.dlg.progressBar.setVisible(False)
+            # self.dlg.progressBar.setValue(0)
+            # self.dlg.progressBar.setVisible(False)
             
             if dir_path and os.path.exists(dir_path):
                 # Libera tutti i layer che potrebbero usare file nella directory temporanea
@@ -647,9 +647,9 @@ class catasto_gml_merger:
         self.dlg.btn_stop.setEnabled(False)
         self.dlg.btn_process.setEnabled(True)
 
-    def update_progress(self, value):
-        """Aggiorna la barra di progresso"""
-        self.dlg.progressBar.setValue(value)
+    # def update_progress(self, value):
+        # """Aggiorna la barra di progresso"""
+        # self.dlg.progressBar.setValue(value)
     
     def on_task_completed(self, success, result):
         """Gestisce il completamento del task"""
@@ -694,7 +694,7 @@ class catasto_gml_merger:
                     else:
                         self.dlg.text_log.append(f"ERRORE: Impossibile caricare il layer PLE '{base_name}'")
                 
-                self.dlg.text_log.append("<span style='color:#FF8C00;font-weight:bold;'>ATTENZIONE: I file temporanei saranno ELIMINATI dopo la conclusione del processo premendo 'Pulisci'!</span>")
+                # self.dlg.text_log.append("<span style='color:#FF8C00;font-weight:bold;'>ATTENZIONE: I file temporanei saranno ELIMINATI dopo la conclusione del processo premendo 'Pulisci'!</span>")
             
             # Mostra i tempi di elaborazione
             if result.get('processing_times'):
