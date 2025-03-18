@@ -10,7 +10,7 @@
 1. **Download dati catastali**: Scarica automaticamente file ZIP da un URL specifico per ogni regione italiana [RNDT](https://geodati.gov.it/geoportale/visualizzazione-metadati/scheda-metadati/?uuid=age:S_0000_ITALIA)
 2. **Estrazione intelligente**: Decomprime file ZIP delle province e dei comuni con gestione ottimizzata dello spazio
 3. **Unione file GML**: Unisce i file GML estratti in un unico file con risoluzione automatica dei conflitti
-4. **Conversione multi-formato**: Supporta l'esportazione in GPKG, SHP, GeoJSON con preservazione completa degli attributi
+4. **Conversione multi-formato**: Supporta l'esportazione in GPKG
 5. **Caricamento in QGIS**: Opzione per caricare direttamente i layer risultanti in QGIS con stile predefinito
 6. **Gestione della memoria**: Ottimizzazione per la gestione di grandi volumi di dati catastali
 7. **Log dettagliato**: Registrazione completa delle operazioni per controllo e debug

@@ -228,16 +228,19 @@ class catasto_gml_merger:
             
             # Verifica che sia stata selezionata una cartella di lavoro
             if not inputs['main_folder']:
-                log_message("ERRORE: Nessuna cartella di lavoro selezionata")
+                log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nessuna cartella di lavoro selezionata</span>")
                 return None
             
             inputs['url'] = self.dlg.le_url.text()
+            if not inputs['url']:
+                log_message("<span style='color:red;font-weight:bold;'>ERRORE: URL non specificato</span>")
+                return None
             print(inputs['url'])
             
             # Ottieni le province selezionate dalla list_provinces
             selected_items = self.dlg.list_provinces.selectedItems()
             if not selected_items:
-                log_message("ERRORE: Nessuna provincia selezionata")
+                log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nessuna provincia selezionata</span>")
                 return None
             
             # Crea una lista di codici provincia dalle selezioni
@@ -259,7 +262,9 @@ class catasto_gml_merger:
             
             if file_type in ['Mappe (MAP)', 'Entrambi']:
                 map_output = self.dlg.le_map_output.filePath()                                      
-                if not map_output: return None
+                if not map_output:
+                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: File di output MAP non specificato</span>")
+                    return None
                 if not map_output.endswith(formats[format_name]):
                     map_output += formats[format_name]
                 inputs['map_output'] = map_output
@@ -267,7 +272,9 @@ class catasto_gml_merger:
             
             if file_type in ['Particelle (PLE)', 'Entrambi']:
                 ple_output = self.dlg.le_ple_output.filePath()                                        
-                if not ple_output: return None
+                if not ple_output:
+                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: File di output PLE non specificato</span>")
+                    return None
                 if not ple_output.endswith(formats[format_name]):
                     ple_output += formats[format_name]
                 inputs['ple_output'] = ple_output
@@ -277,6 +284,7 @@ class catasto_gml_merger:
             print(inputs['load_layers'])
             
             self.dlg.text_log.clear()
+            log_message("<span style='color:green;font-weight:bold;'>Parametri verificati correttamente</span>")
             
             return inputs
 
@@ -529,10 +537,9 @@ class catasto_gml_merger:
                 
                 inputs = collect_inputs()
                 if not inputs:
-                    # log_message("Operazione annullata")
-                    # self.dlg.progressBar.setVisible(False)
+                    log_message("Operazione annullata: verifica i parametri inseriti")
                     self.reset_processing_state()
-                    # return
+                    return
                 
                 self.dlg.setWindowTitle("Catasto IT GML Merger PRO - Elaborazione in corso")
                 
@@ -548,7 +555,7 @@ class catasto_gml_merger:
                 QgsApplication.taskManager().addTask(task)
                 self.current_task = task
                 
-                log_message("Task avviato in background...")
+                log_message("Task avviato in background...(Puoi continuare a lavorare in QGIS, riduci a icona il Plugin!)")
                 
             except Exception as e:
                 log_message(f"\nSi è verificato un errore durante l'avvio del task: {str(e)}")
@@ -960,10 +967,12 @@ class GmlProcessingTask(QgsTask):
         ]
 
         if source_files:
-            # Usa una directory temporanea specifica per evitare conflitti
-            temp_dir = os.path.join(os.path.dirname(source_folder), "temp_processing")
-            os.makedirs(temp_dir, exist_ok=True)
-            temp_merge = os.path.join(temp_dir, f"temp_merge_{file_type}_{int(time.time())}.gpkg")
+            # Usa la directory temporanea principale invece di crearne una nuova
+            temp_dir = self.directory_temporanea
+            # Crea una sottodirectory specifica per l'operazione di merge 
+            merge_subdir = os.path.join(temp_dir, f"merge_{file_type}")
+            os.makedirs(merge_subdir, exist_ok=True)
+            temp_merge = os.path.join(merge_subdir, f"temp_merge_{file_type}_{int(time.time())}.gpkg")
 
             # Verifica directory di output e creala se necessario
             output_dir = os.path.dirname(output_file)
