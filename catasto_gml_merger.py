@@ -534,7 +534,7 @@ class catasto_gml_merger:
                     self.reset_processing_state()
                     # return
                 
-                self.dlg.setWindowTitle("CatastoIT GML Merger - Elaborazione in corso")
+                self.dlg.setWindowTitle("Catasto IT GML Merger PRO - Elaborazione in corso")
                 
                 # Crea e configura il task
                 task = GmlProcessingTask('Elaborazione GML', inputs)
@@ -602,7 +602,7 @@ class catasto_gml_merger:
             self.dlg.le_url.setEnabled(True)
             self.dlg.le_url.clear()
             self.dlg.text_log.clear()
-            self.dlg.setWindowTitle("CatastoIT GML Merger")
+            self.dlg.setWindowTitle("Catasto IT GML Merger PRO")
             
             # Chiudi il dialog alla fine
             self.dlg.hide()
@@ -713,7 +713,7 @@ class catasto_gml_merger:
                 self.dlg.text_log.append(f"Errore: {str(result.get('exception'))}")
         
         # Aggiorna titolo finestra
-        self.dlg.setWindowTitle("CatastoIT GML Merger - Elaborazione completata")
+        self.dlg.setWindowTitle("Catasto IT GML Merger PRO - Elaborazione completata")
         
         # Ripristina lo stato dell'interfaccia
         self.reset_processing_state()
@@ -913,7 +913,7 @@ class GmlProcessingTask(QgsTask):
 
             if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"] and ple_count > 0 and not self.isCanceled():
                 self.log_message.emit("\nUnione files PLE\n")
-                self.log_message.emit("<span style='color:blue;font-weight:bold;'>Attendere prego, operazione costosa!</span>")
+                self.log_message.emit("<span style='color:blue;font-weight:bold;'>Attendere prego, operazione costosa!<br>Puoi ridurre ad icona e continuare a lavorare con QGIS!</span>")
                 ple_time = self.merge_files(
                     ple_folder, self.inputs["ple_output"], "PLE"
                 )
