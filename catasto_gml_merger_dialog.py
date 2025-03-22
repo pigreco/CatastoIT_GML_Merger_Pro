@@ -26,6 +26,10 @@ import os
 
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
+from qgis.PyQt.QtWidgets import QProgressBar, QPushButton
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtCore import Qt
+from .regions import REGIONS, get_provinces
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -36,30 +40,64 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
     def __init__(self, parent=None):
         """Constructor."""
         super(catasto_gml_mergerDialog, self).__init__(parent)
-        # Set up the user interface from Designer through FORM_CLASS.
-        # After self.setupUi() you can access any designer object by doing
-        # self.<objectname>, and you can use autoconnect slots - see
-        # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
-        # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
         
-        # self.le_map_output.setFilter('*.gpgk')
-        # self.le_ple_output.setFilter('*.gpgk')
+        # Aggiungi il pulsante di minimizzazione
+        self.setWindowFlags(self.windowFlags() | Qt.WindowMinimizeButtonHint)
         
-        # def updateFileType():
+        # Aggiungi ProgressBar e pulsante di annullamento
+        # if not hasattr(self, 'progressBar'):
+            # self.progressBar = QProgressBar(self)
+            # self.progressBar.setVisible(False)
+            # self.layout().addWidget(self.progressBar)
             
-            # self.le_map_output.setFilter('*.' + self.cb_format.currentText())
-            # self.le_ple_output.setFilter('*.' + self.cb_format.currentText())
-            
-            # if self.le_map_output.filePath():
-                # self.le_map_output.setFilePath(self.le_map_output.filePath().split('.')[0]+'.'+self.cb_format.currentText())
-            
-            # if self.le_ple_output.filePath():
-                # self.le_ple_output.setFilePath(self.le_ple_output.filePath().split('.')[0]+'.'+self.cb_format.currentText())
-                    
-            # # print('update', self.cb_format.currentText())
+        if not hasattr(self, 'btn_cancel'):
+            self.btn_cancel = QPushButton("Annulla", self)
+            self.btn_cancel.setVisible(False)
+            self.btn_cancel.clicked.connect(self.cancel_operation)
+            self.layout().addWidget(self.btn_cancel)
         
-        # self.cb_format.currentTextChanged.connect(updateFileType)
+        # Imposta il placeholder per il widget di selezione cartella
+        self.le_folder.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\munnizza")
+        # Aggiungi placeholders agli altri widget di selezione file
+        self.le_map_output.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\munnizza\\mappe.gpkg")
+        self.le_ple_output.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\munnizza\\particella.gpkg")
+        self.le_url.setPlaceholderText("ES: https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/GetDataset.php?dataset=SICILIA.zip")
+        
+        # Configura il pulsante per mostrare/nascondere la guida
+        self.btn_toggle_help.clicked.connect(self.toggle_help_panel)
+        
+        # Popola il combobox delle regioni
+        self.populate_regions()
+        
+        # Imposta i filtri per i file di output
+        self.le_map_output.setFilter('*.gpkg')
+        self.le_ple_output.setFilter('*.gpkg')
+        
+        def updateFileType():
+            ext = self.cb_format.currentText().lower()
+            self.le_map_output.setFilter('*.' + ext)
+            self.le_ple_output.setFilter('*.' + ext)
+            
+            if self.le_map_output.filePath():
+                base_path = self.le_map_output.filePath().split('.')[0]
+                self.le_map_output.setFilePath(base_path + '.' + ext)
+            
+            if self.le_ple_output.filePath():
+                base_path = self.le_ple_output.filePath().split('.')[0]
+                self.le_ple_output.setFilePath(base_path + '.' + ext)
+        
+        # Connetti il segnale alla funzione
+        self.cb_format.currentTextChanged.connect(updateFileType)
+        
+        # Connetti il cambio di regione all'aggiornamento delle province
+        self.cb_region.currentTextChanged.connect(self.update_provinces)
+        
+        # Chiamare questo metodo durante l'inizializzazione del dialogo
+        self.setup_help_content()
+        
+        # Aggiorna la lista delle province all'apertura con la regione predefinita
+        self.update_provinces()
         
     def closeEvent(self, event):
         # dir_path = directory_temporanea
@@ -80,3 +118,66 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         self.text_log.clear()
         
         print("close!")
+
+    def populate_regions(self):
+        """Popola il combobox delle regioni."""
+        self.cb_region.clear()
+        self.cb_region.addItems(REGIONS)
+
+    def get_selected_region(self):
+        """Restituisce la regione selezionata."""
+        return self.cb_region.currentText()
+    
+    def update_provinces(self):
+        """Aggiorna il combobox delle province in base alla regione selezionata."""
+        region = self.cb_region.currentText()
+        provinces = get_provinces(region)
+        
+        self.list_provinces.clear()
+        self.list_provinces.addItems(provinces)
+
+    # def cancel_operation(self):
+        # """Gestisce l'evento di annullamento dell'operazione in corso."""
+        # self.btn_cancel.setVisible(False)
+        # self.progressBar.setVisible(False)
+        # Aggiungi qui il codice per interrompere qualsiasi operazione in corso
+        # self.text_log.append("Operazione annullata dall'utente.")
+        
+    # def example_usage(self):
+        # """Esempio di utilizzo della progress bar e del pulsante di annullamento."""
+        # self.progressBar.setVisible(False)
+        # self.progressBar.setMinimum(0)
+        # self.progressBar.setMaximum(100)
+        # self.progressBar.setValue(0)
+        # self.btn_cancel.setVisible(False)
+
+        # Durante l'elaborazione
+        # self.progressBar.setValue(50)  # aggiorna il valore
+
+        # A operazione completata
+        # self.progressBar.setVisible(False)
+        # self.btn_cancel.setVisible(False)
+        
+    def toggle_help_panel(self):
+        """Gestisce la visualizzazione/nascondimento del pannello della guida."""
+        if self.help_browser.isVisible():
+            self.help_browser.hide()
+            self.btn_toggle_help.setIcon(QIcon(":/qt-project.org/styles/commonstyle/images/right-32.png"))
+            self.btn_toggle_help.setToolTip("Mostra guida")
+        else:
+            self.help_browser.show()
+            self.btn_toggle_help.setIcon(QIcon(":/qt-project.org/styles/commonstyle/images/left-32.png"))
+            self.btn_toggle_help.setToolTip("Nascondi guida")
+            
+    def setup_help_content(self):
+        """Carica il contenuto della guida dal file HTML esterno"""
+        # Percorso del file HTML relativo alla posizione del plugin
+        help_file_path = os.path.join(os.path.dirname(__file__), 'help_content.html')
+        
+        # Verifica se il file esiste
+        if os.path.exists(help_file_path):
+            with open(help_file_path, 'r', encoding='utf-8') as html_file:
+                help_content = html_file.read()
+                self.help_browser.setHtml(help_content)
+        else:
+            self.help_browser.setHtml("<p>File della guida non trovato.</p>")

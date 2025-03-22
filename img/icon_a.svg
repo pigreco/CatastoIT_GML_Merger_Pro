@@ -29,10 +29,10 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:zoom="0.52811473"
      inkscape:cx="344.62209"
-     inkscape:cy="477.16904"
-     inkscape:window-width="1920"
-     inkscape:window-height="1017"
-     inkscape:window-x="-8"
+     inkscape:cy="476.22228"
+     inkscape:window-width="2486"
+     inkscape:window-height="1057"
+     inkscape:window-x="66"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
      inkscape:current-layer="g1" /><g
@@ -62,11 +62,4 @@
    style="opacity:1;fill:#ffc843;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10;stroke-dasharray:none"
    stroke-linecap="round"
    id="path2" />
-</g></g><path
-     d="m 999.03362,266.09954 -59.68082,57.32432 180.6147,-31.73956 28.7865,-169.48189 -59.6848,57.32483 -98.39698,-89.949782 -3.16118,-2.89052 c -0.0976,-0.11418 -0.1202,-0.24355 -0.23479,-0.34672 -0.11294,-0.10392 -0.30303,-0.16748 -0.4274,-0.25712 l -0.30637,-0.28001 -0.0703,0.0676 c -7.65321,-4.738 -32.47358,9.36187 -56.62878,32.408852 -24.15424,23.04595 -38.7089,46.51776 -33.4813,53.5671 l -0.14244,0.13612 0.66325,0.60631 3.05926,2.79672 c 0.10237,0.16511 0.19392,0.31045 0.3365,0.44039 0.14243,0.12992 0.27922,0.32716 0.45826,0.41893 l 98.29518,89.85666 z"
-     fill="param(fill)"
-     fill-opacity="param(fill-opacity)"
-     stroke="param(outline)"
-     stroke-opacity="param(outline-opacity)"
-     stroke-width="0.637756"
-     id="path1" /></svg>
+</g></g></svg>
