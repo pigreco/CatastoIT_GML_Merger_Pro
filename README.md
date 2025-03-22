@@ -52,3 +52,6 @@
 - Spazio su disco sufficiente per i dati temporanei e di output
 - Python 3.7 o superiore con librerie GDAL/OGR
 
+## Disclaimer
+
+L'autore del plugin non è un developer ma è riuscito a realizzare il plugin con l'ausilio della AI.
