@@ -16,6 +16,7 @@
 7. **Log dettagliato**: Registrazione completa delle operazioni per controllo e debug
 8. **Filtro geografico**: Possibilità di selezionare più province
 9. **Report statistico**: Generazione automatica di report sui dati elaborati
+10. **Supporto sezione censuaria**: Possibilità di aggiungere automaticamente la sezione censuaria nelle Particelle
 
 ## Come utilizzare il plugin
 
@@ -23,13 +24,14 @@
 2. Seleziona la regione dal menu a discesa (l'URL si aggiorna automaticamente)
 3. Seleziona il tipo di file da elaborare (Mappe, Particelle o entrambi)
 4. Applica eventuali filtri geografici per province specifiche
-5. Scegli il formato di output desiderato (solo GPKG)
-6. Definisci i percorsi dei file di output
-7. Seleziona se caricare i layer risultanti in QGIS
-8. Clicca su "Elabora" per avviare il processo
-9. Monitora l'avanzamento attraverso i messaggi nel riquadro di log
-10. Al termine, visualizza il report statistico generato automaticamente
-11. Clicca su "Chiudi" per pulire le directory temporanee
+5. Se lavori con Particelle, puoi attivare l'opzione "Aggiungi Sezione Censuaria nelle Particelle"
+6. Scegli il formato di output desiderato (solo GPKG)
+7. Definisci i percorsi dei file di output
+8. Seleziona se caricare i layer risultanti in QGIS
+9. Clicca su "Elabora" per avviare il processo
+10. Monitora l'avanzamento attraverso i messaggi nel riquadro di log
+11. Al termine, visualizza il report statistico generato automaticamente
+12. Clicca su "Chiudi" per pulire le directory temporanee
 
 ## Note tecniche
 - Il plugin crea directory temporanee per l'elaborazione con pulizia automatica
@@ -39,9 +41,10 @@
 
 ## Dati di output
 - Nei file di output vengono eliminati i campi inutili e mantenuti solo `gml_id` e `ADMINISTRATIVEUNIT`
-- Nei file di output vengono aggiunti campi calcolati per facilitare l'identificazione catastale
+- Nei file di output vengono aggiunti campi calcolati per facilitare l'identificazione catastale:
   - Campo **Foglio**: estratto automaticamente dai dati originali per rapida consultazione
   - Campo **Particella**: numero identificativo della particella catastale, elaborato dal codice originale
+  - Campo **sez_censuaria**: (opzionale) identifica la sezione censuaria estratta dal codice originale
 - La combinazione di questi campi consente ricerche e filtraggio immediato dei dati catastali
 - Gli attributi originali vengono mantenuti per compatibilità con altri sistemi
 
