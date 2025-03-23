@@ -1135,7 +1135,7 @@ class GmlProcessingTask(QgsTask):
                             
                             # Estrai sezione censuaria per PLE (carattere in posizione 32)
                             if needs_sez_censuaria and len(gml_id) > 32:
-                                sez_censuaria = gml_id[32:33]
+                                sez_censuaria = gml_id[31:32]
                                 changes_buffer[feature_id][sez_censuaria_idx] = sez_censuaria
                     
                     # Applica tutte le modifiche in batch
