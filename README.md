@@ -55,3 +55,7 @@
 ## Disclaimer
 
 L'autore del plugin non è un developer ma è riuscito a realizzare il plugin con l'ausilio della AI.
+
+## Video Demo
+
+[![QGIS Tutorial Video](https://img.youtube.com/vi/lFHrthP1nHs/0.jpg)](https://youtu.be/lFHrthP1nHs)
