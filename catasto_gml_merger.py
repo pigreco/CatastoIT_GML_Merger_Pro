@@ -261,22 +261,34 @@ class catasto_gml_merger:
             print(inputs['output_extension'])
             
             if file_type in ['Mappe (MAP)', 'Entrambi']:
-                map_output = self.dlg.le_map_output.filePath()                                      
-                if not map_output:
-                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: File di output MAP non specificato</span>")
+                # Ottieni solo il nome del file, non il percorso
+                map_filename = self.dlg.le_map_output.text()
+                if not map_filename:
+                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nome file di output MAP non specificato</span>")
                     return None
-                if not map_output.endswith(formats[format_name]):
-                    map_output += formats[format_name]
+                
+                # Aggiungi estensione se mancante
+                if not map_filename.endswith(formats[format_name]):
+                    map_filename += formats[format_name]
+                
+                # Componi il percorso completo usando la cartella principale
+                map_output = os.path.join(inputs['main_folder'], map_filename)
                 inputs['map_output'] = map_output
                 print(inputs['map_output'])
             
             if file_type in ['Particelle (PLE)', 'Entrambi']:
-                ple_output = self.dlg.le_ple_output.filePath()                                        
-                if not ple_output:
-                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: File di output PLE non specificato</span>")
+                # Ottieni solo il nome del file, non il percorso
+                ple_filename = self.dlg.le_ple_output.text()
+                if not ple_filename:
+                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nome file di output PLE non specificato</span>")
                     return None
-                if not ple_output.endswith(formats[format_name]):
-                    ple_output += formats[format_name]
+                
+                # Aggiungi estensione se mancante
+                if not ple_filename.endswith(formats[format_name]):
+                    ple_filename += formats[format_name]
+                
+                # Componi il percorso completo usando la cartella principale
+                ple_output = os.path.join(inputs['main_folder'], ple_filename)
                 inputs['ple_output'] = ple_output
                 print(inputs['ple_output'])
 
@@ -599,8 +611,8 @@ class catasto_gml_merger:
 
             # Resetta l'interfaccia
             self.dlg.le_folder.setFilePath("")
-            self.dlg.le_map_output.setFilePath("")
-            self.dlg.le_ple_output.setFilePath("")
+            self.dlg.le_map_output.setText("")  # Usa setText invece di setFilePath
+            self.dlg.le_ple_output.setText("")  # Usa setText invece di setFilePath
             self.dlg.cb_file_type.setCurrentIndex(0)
             self.dlg.cb_format.setCurrentIndex(0)
             self.dlg.cb_region.setCurrentIndex(0)
@@ -629,6 +641,10 @@ class catasto_gml_merger:
             ple_enabled = file_type in ["Particelle (PLE)", "Entrambi"]
             self.dlg.le_ple_output.setEnabled(ple_enabled)
             
+            # Aggiorna placeholder text per indicare che è richiesto solo il nome del file
+            self.dlg.le_map_output.setPlaceholderText("Solo nome file (es. mappe_catastali)")
+            self.dlg.le_ple_output.setPlaceholderText("Solo nome file (es. particelle_catastali)")
+        
         self.dlg.cb_region.currentIndexChanged.connect(url_update)
         self.dlg.cb_file_type.currentIndexChanged.connect(aggiorna_campi_output)                                                       
         self.dlg.btn_process.clicked.connect(process_gml_files)
