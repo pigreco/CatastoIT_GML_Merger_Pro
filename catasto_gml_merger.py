@@ -231,6 +231,12 @@ class catasto_gml_merger:
                 log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nessuna cartella di lavoro selezionata</span>")
                 return None
             
+            # Verifica lo stato del checkbox per sezione censuaria
+            inputs['add_sezione_censuaria'] = self.dlg.cb_sez_censu.isChecked()
+            if inputs['add_sezione_censuaria']:
+                log_message("Opzione 'Aggiungi Sezione Censuaria nelle Particelle' attivata")
+                print("Sezione censuaria attivata")
+            
             inputs['url'] = self.dlg.le_url.text()
             if not inputs['url']:
                 log_message("<span style='color:red;font-weight:bold;'>ERRORE: URL non specificato</span>")
@@ -412,6 +418,10 @@ class catasto_gml_merger:
                         if file_type == "PLE":
                             log_message("Aggiunta campo 'particella'...")
                             fields_to_add.append(QgsField("particella", QVariant.String))
+                            # Aggiungi campo sezione censuaria se richiesto
+                            if self.inputs.get("add_sezione_censuaria", False):
+                                self.log_message.emit("Aggiunta campo 'sez_censuaria'...")
+                                fields_to_add.append(QgsField("sez_censuaria", QVariant.String, len=1))
                         
                         # Inizia la transazione per le modifiche in batch
                         output_layer.startEditing()
@@ -421,10 +431,12 @@ class catasto_gml_merger:
                         # Ottieni gli indici una sola volta fuori dal ciclo
                         foglio_idx = output_layer.fields().indexFromName("foglio")
                         particella_idx = output_layer.fields().indexFromName("particella") if file_type == "PLE" else -1
+                        sez_censuaria_idx = output_layer.fields().indexFromName("sez_censuaria") if file_type == "PLE" and self.inputs.get("add_sezione_censuaria", False) else -1
                         gml_id_idx = output_layer.fields().indexFromName("gml_id")
                         
                         # Calcola valori una sola volta
                         needs_particella = file_type == "PLE" and particella_idx >= 0
+                        needs_sez_censuaria = file_type == "PLE" and sez_censuaria_idx >= 0
                         
                         # Inizializza il buffer per le modifiche prima di usarlo
                         changes_buffer = {}
@@ -444,6 +456,11 @@ class catasto_gml_merger:
                                 if needs_particella and len(gml_id) > 39:
                                     particella = gml_id[39:]
                                     changes_buffer[feature_id][particella_idx] = particella
+                                
+                                # Estrai sezione censuaria per PLE (carattere in posizione 32)
+                                if needs_sez_censuaria and len(gml_id) > 32:
+                                    sez_censuaria = gml_id[32:33]
+                                    changes_buffer[feature_id][sez_censuaria_idx] = sez_censuaria
                         
                         # Rimosso il secondo ciclo duplicato che faceva lo stesso lavoro
                         
@@ -640,6 +657,7 @@ class catasto_gml_merger:
             # Gestisci i widget per l'output PLE
             ple_enabled = file_type in ["Particelle (PLE)", "Entrambi"]
             self.dlg.le_ple_output.setEnabled(ple_enabled)
+            self.dlg.cb_sez_censu.setVisible(ple_enabled)  # Mostra l'opzione sezione censuaria solo quando PLE è abilitato
             
             # Aggiorna placeholder text per indicare che è richiesto solo il nome del file
             self.dlg.le_map_output.setPlaceholderText("Solo nome file (es. mappe_catastali)")
@@ -1077,6 +1095,10 @@ class GmlProcessingTask(QgsTask):
                     if file_type == "PLE":
                         self.log_message.emit("Aggiunta campo 'particella'...")
                         fields_to_add.append(QgsField("particella", QVariant.String))
+                        # Aggiungi campo sezione censuaria se richiesto
+                        if self.inputs.get("add_sezione_censuaria", False):
+                            self.log_message.emit("Aggiunta campo 'sez_censuaria'...")
+                            fields_to_add.append(QgsField("sez_censuaria", QVariant.String, len=1))
                     
                     # Inizia la transazione per le modifiche in batch
                     output_layer.startEditing()
@@ -1086,10 +1108,12 @@ class GmlProcessingTask(QgsTask):
                     # Ottieni gli indici una sola volta fuori dal ciclo
                     foglio_idx = output_layer.fields().indexFromName("foglio")
                     particella_idx = output_layer.fields().indexFromName("particella") if file_type == "PLE" else -1
+                    sez_censuaria_idx = output_layer.fields().indexFromName("sez_censuaria") if file_type == "PLE" and self.inputs.get("add_sezione_censuaria", False) else -1
                     gml_id_idx = output_layer.fields().indexFromName("gml_id")
                     
                     # Calcola valori una sola volta
                     needs_particella = file_type == "PLE" and particella_idx >= 0
+                    needs_sez_censuaria = file_type == "PLE" and sez_censuaria_idx >= 0
                     
                     # Inizializza il buffer per le modifiche prima di usarlo
                     changes_buffer = {}
@@ -1108,6 +1132,11 @@ class GmlProcessingTask(QgsTask):
                             if needs_particella and len(gml_id) > 39:
                                 particella = gml_id[39:]
                                 changes_buffer[feature_id][particella_idx] = particella
+                            
+                            # Estrai sezione censuaria per PLE (carattere in posizione 32)
+                            if needs_sez_censuaria and len(gml_id) > 32:
+                                sez_censuaria = gml_id[32:33]
+                                changes_buffer[feature_id][sez_censuaria_idx] = sez_censuaria
                     
                     # Applica tutte le modifiche in batch
                     batch_size = 5000  # Dimensione del batch per evitare operazioni troppo grandi
