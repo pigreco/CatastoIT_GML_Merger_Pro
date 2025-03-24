@@ -38,16 +38,10 @@
   <layout class="QHBoxLayout" name="horizontalLayout_main">
    <item>
     <layout class="QGridLayout" name="gridLayout">
-     <item row="15" column="0">
-      <widget class="QCheckBox" name="cb_load_layers">
-       <property name="toolTip">
-        <string>Se attivata carica i layer appena termina il download</string>
-       </property>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_1">
        <property name="text">
-        <string>Carica layer in QGIS</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
+        <string>Tipo File(MAP/PLE):</string>
        </property>
       </widget>
      </item>
@@ -58,7 +52,7 @@
        </property>
       </widget>
      </item>
-     <item row="17" column="0">
+     <item row="20" column="0">
       <widget class="QPushButton" name="btn_process">
        <property name="minimumSize">
         <size>
@@ -87,23 +81,20 @@
        </property>
       </widget>
      </item>
-     <item row="11" column="0">
-      <widget class="QLabel" name="label_6">
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_4">
        <property name="text">
-        <string>Nome File MAPPE:</string>
+        <string>URL (Download):</string>
        </property>
       </widget>
      </item>
-     <item row="12" column="1">
-      <widget class="QLineEdit" name="le_ple_output">
-       <property name="toolTip">
-        <string>Inserisci solo il nome del file (senza percorso)</string>
+     <item row="0" column="0">
+      <widget class="QPushButton" name="btn_cancel">
+       <property name="visible">
+        <bool>false</bool>
        </property>
-       <property name="whatsThis">
-        <string>Salva il file unito PLE</string>
-       </property>
-       <property name="placeholderText">
-        <string>Solo nome file (es. particelle_catastali)</string>
+       <property name="text">
+        <string>Annulla</string>
        </property>
       </widget>
      </item>
@@ -161,16 +152,85 @@
        </item>
       </layout>
      </item>
-     <item row="14" column="0" colspan="2">
-      <widget class="QTextEdit" name="text_log">
+     <item row="16" column="1">
+      <widget class="QLabel" name="labelAutori">
+       <property name="font">
+        <font>
+         <pointsize>8</pointsize>
+         <weight>50</weight>
+         <italic>true</italic>
+         <bold>false</bold>
+        </font>
+       </property>
        <property name="toolTip">
-        <string>Area log - descrive i vari passaggi.</string>
+        <string>Autori del plugin</string>
        </property>
-       <property name="statusTip">
-        <string>TEXT LOG</string>
+       <property name="text">
+        <string>AUTORI: &lt;b&gt;Totò Fiandaca&lt;/b&gt; e &lt;b&gt;Giulio Fattori &lt;/b&gt;</string>
        </property>
-       <property name="readOnly">
-        <bool>true</bool>
+       <property name="textFormat">
+        <enum>Qt::AutoText</enum>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="1">
+      <widget class="QgsFileWidget" name="le_folder">
+       <property name="toolTip">
+        <string>Seleziona la cartella di destinazione dei file</string>
+       </property>
+       <property name="defaultRoot">
+        <string/>
+       </property>
+       <property name="storageMode">
+        <enum>QgsFileWidget::GetDirectory</enum>
+       </property>
+       <property name="options">
+        <set>QFileDialog::ShowDirsOnly</set>
+       </property>
+       <property name="fileWidgetButtonIcon" stdset="0">
+        <iconset>
+         <normaloff>:/qt-project.org/styles/commonstyle/images/newdirectory-128.png</normaloff>:/qt-project.org/styles/commonstyle/images/newdirectory-128.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item row="20" column="1" alignment="Qt::AlignRight">
+      <widget class="QPushButton" name="btn_close">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>500</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>Pulisce dai file temporanei e Chiude finestra.</string>
+       </property>
+       <property name="layoutDirection">
+        <enum>Qt::LeftToRight</enum>
+       </property>
+       <property name="styleSheet">
+        <string>background-color:rgb(185, 132, 88); color: white; font-weight: bold;</string>
+       </property>
+       <property name="text">
+        <string>Pulisci File Temporanei e Chiudi</string>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>:/images/themes/default/console/iconClearConsole.svg</normaloff>:/images/themes/default/console/iconClearConsole.svg</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>25</width>
+         <height>25</height>
+        </size>
        </property>
       </widget>
      </item>
@@ -196,38 +256,7 @@
        </property>
       </widget>
      </item>
-     <item row="13" column="1">
-      <widget class="QLabel" name="labelAutori">
-       <property name="font">
-        <font>
-         <pointsize>8</pointsize>
-         <weight>50</weight>
-         <italic>true</italic>
-         <bold>false</bold>
-        </font>
-       </property>
-       <property name="toolTip">
-        <string>Autori del plugin</string>
-       </property>
-       <property name="text">
-        <string>AUTORI: &lt;b&gt;Totò Fiandaca&lt;/b&gt; e &lt;b&gt;Giulio Fattori &lt;/b&gt;</string>
-       </property>
-       <property name="textFormat">
-        <enum>Qt::AutoText</enum>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Scegli Regione:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="15" column="1" alignment="Qt::AlignRight">
+     <item row="18" column="1" alignment="Qt::AlignRight">
       <widget class="QPushButton" name="btn_stop">
        <property name="maximumSize">
         <size>
@@ -250,6 +279,108 @@
        <property name="icon">
         <iconset>
          <normaloff>:/qt-project.org/styles/commonstyle/images/stop-32.png</normaloff>:/qt-project.org/styles/commonstyle/images/stop-32.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Scegli Regione:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="17" column="0" colspan="2">
+      <widget class="QTextEdit" name="text_log">
+       <property name="toolTip">
+        <string>Area log - descrive i vari passaggi.</string>
+       </property>
+       <property name="statusTip">
+        <string>TEXT LOG</string>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="11" column="0">
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>Nome File MAPPE:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="18" column="0">
+      <widget class="QCheckBox" name="cb_load_layers">
+       <property name="toolTip">
+        <string>Se attivata carica i layer appena termina il download</string>
+       </property>
+       <property name="text">
+        <string>Carica layer in QGIS</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="10" column="1">
+      <widget class="QComboBox" name="cb_format">
+       <property name="toolTip">
+        <string>Seleziona il formato di output (Solo GeoPackage!)</string>
+       </property>
+       <property name="editable">
+        <bool>false</bool>
+       </property>
+       <item>
+        <property name="text">
+         <string>GPKG</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="21" column="0" colspan="2">
+      <layout class="QHBoxLayout" name="horizontalLayout_2"/>
+     </item>
+     <item row="12" column="0">
+      <widget class="QLabel" name="label_7">
+       <property name="text">
+        <string>Nome File PARTICELLE:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="16" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Log:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Scegli Regione:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="12" column="1">
+      <widget class="QLineEdit" name="le_ple_output">
+       <property name="toolTip">
+        <string>Inserisci solo il nome del file (senza percorso)</string>
+       </property>
+       <property name="whatsThis">
+        <string>Salva il file unito PLE</string>
+       </property>
+       <property name="placeholderText">
+        <string>Solo nome file (es. particelle_catastali)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QLineEdit" name="le_url">
+       <property name="toolTip">
+        <string>URL del file ZIP su RNDT</string>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -320,67 +451,6 @@
        </item>
       </layout>
      </item>
-     <item row="8" column="1">
-      <widget class="QgsFileWidget" name="le_folder">
-       <property name="toolTip">
-        <string>Seleziona la cartella di destinazione dei file</string>
-       </property>
-       <property name="defaultRoot">
-        <string/>
-       </property>
-       <property name="storageMode">
-        <enum>QgsFileWidget::GetDirectory</enum>
-       </property>
-       <property name="options">
-        <set>QFileDialog::ShowDirsOnly</set>
-       </property>
-       <property name="fileWidgetButtonIcon" stdset="0">
-        <iconset>
-         <normaloff>:/qt-project.org/styles/commonstyle/images/newdirectory-128.png</normaloff>:/qt-project.org/styles/commonstyle/images/newdirectory-128.png</iconset>
-       </property>
-      </widget>
-     </item>
-     <item row="13" column="0">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Log:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_1">
-       <property name="text">
-        <string>Tipo File(MAP/PLE):</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QPushButton" name="btn_cancel">
-       <property name="visible">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Annulla</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Scegli Regione:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="1">
-      <widget class="QLineEdit" name="le_url">
-       <property name="toolTip">
-        <string>URL del file ZIP su RNDT</string>
-       </property>
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
      <item row="8" column="0">
       <widget class="QLabel" name="label_2">
        <property name="text">
@@ -388,74 +458,14 @@
        </property>
       </widget>
      </item>
-     <item row="18" column="0" colspan="2">
-      <layout class="QHBoxLayout" name="horizontalLayout_2"/>
+     <item row="13" column="1">
+      <widget class="QgsProjectionSelectionWidget" name="mQgsProjectionSelectionWidget"/>
      </item>
-     <item row="17" column="1" alignment="Qt::AlignRight">
-      <widget class="QPushButton" name="btn_close">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>500</width>
-         <height>30</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>Pulisce dai file temporanei e Chiude finestra.</string>
-       </property>
-       <property name="layoutDirection">
-        <enum>Qt::LeftToRight</enum>
-       </property>
-       <property name="styleSheet">
-        <string>background-color:rgb(185, 132, 88); color: white; font-weight: bold;</string>
-       </property>
+     <item row="13" column="0">
+      <widget class="QLabel" name="label_9">
        <property name="text">
-        <string>Pulisci File Temporanei e Chiudi</string>
+        <string>Riproietta [Opzionale]</string>
        </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>:/images/themes/default/console/iconClearConsole.svg</normaloff>:/images/themes/default/console/iconClearConsole.svg</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>25</width>
-         <height>25</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="label_4">
-       <property name="text">
-        <string>URL (Download):</string>
-       </property>
-      </widget>
-     </item>
-     <item row="12" column="0">
-      <widget class="QLabel" name="label_7">
-       <property name="text">
-        <string>Nome File PARTICELLE:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="10" column="1">
-      <widget class="QComboBox" name="cb_format">
-       <property name="toolTip">
-        <string>Seleziona il formato di output (Solo GeoPackage!)</string>
-       </property>
-       <property name="editable">
-        <bool>false</bool>
-       </property>
-       <item>
-        <property name="text">
-         <string>GPKG</string>
-        </property>
-       </item>
       </widget>
      </item>
     </layout>
@@ -534,6 +544,11 @@ p, li { white-space: pre-wrap; }
    <class>QgsFileWidget</class>
    <extends>QWidget</extends>
    <header>qgsfilewidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QgsProjectionSelectionWidget</class>
+   <extends>QWidget</extends>
+   <header>qgsprojectionselectionwidget.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
