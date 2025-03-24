@@ -208,6 +208,10 @@ class catasto_gml_merger:
             self.current_task = None
             self.processing_active = False
             
+            # Inizializza il widget di proiezione con il CRS predefinito
+            from qgis.core import QgsCoordinateReferenceSystem
+            self.dlg.mQgsProjectionSelectionWidget.setCrs(QgsCoordinateReferenceSystem('EPSG:6706'))
+            
         self.dlg.show()
             
         def log_message(msg):
@@ -230,6 +234,11 @@ class catasto_gml_merger:
             if not inputs['main_folder']:
                 log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nessuna cartella di lavoro selezionata</span>")
                 return None
+            
+            # Ottieni il CRS selezionato dal widget di proiezione
+            crs = self.dlg.mQgsProjectionSelectionWidget.crs()
+            inputs['target_crs'] = crs.authid() if crs.isValid() else 'EPSG:6706'  # Default a EPSG:6706 se non valido
+            print(f"CRS selezionato: {inputs['target_crs']}")
             
             # Verifica lo stato del checkbox per sezione censuaria
             inputs['add_sezione_censuaria'] = self.dlg.cb_sez_censu.isChecked()
@@ -942,12 +951,16 @@ class GmlProcessingTask(QgsTask):
             # Esegui l'unione dei file
             self.processing_times = {}
 
+            original_map_output = None
+            original_ple_output = None
+
             # Esegui l'unione una sola volta per tipo di file
             if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"] and map_count > 0 and not self.isCanceled():
                 self.log_message.emit("\nUnione files MAP\n")
                 map_time = self.merge_files(
                     map_folder, self.inputs["map_output"], "MAP"
                 )
+                original_map_output = self.inputs["map_output"]  # Salva il percorso originale
                 self.setProgress(75)  # 75% dopo unione MAP
                 if map_time:
                     self.processing_times["MAP"] = map_time
@@ -958,14 +971,39 @@ class GmlProcessingTask(QgsTask):
                 ple_time = self.merge_files(
                     ple_folder, self.inputs["ple_output"], "PLE"
                 )
+                original_ple_output = self.inputs["ple_output"]  # Salva il percorso originale
                 # Se abbiamo già elaborato MAP arriviamo al 100%, altrimenti al 75%
                 if self.inputs["file_type"] == "Entrambi":
-                    self.setProgress(100)
+                    self.setProgress(90)  # Lasciamo il 10% per eventuale riproiezione
                 else:
                     self.setProgress(75)
                     
                 if ple_time:
-                    self.processing_times["PLE"] = ple_time 
+                    self.processing_times["PLE"] = ple_time
+        
+            # Esegui la riproiezione se necessario
+            target_crs = self.inputs.get('target_crs', 'EPSG:6706')
+            
+            if target_crs != 'EPSG:6706' and not self.isCanceled():
+                self.log_message.emit(f"\n<span style='color:blue;font-weight:bold;'>Riproiezione dei file al sistema {target_crs}...</span>")
+                
+                # Riproietta MAP se esiste
+                if original_map_output and os.path.exists(original_map_output):
+                    reproject_start = datetime.now()
+                    reprojected_map = self.reproject_layer(original_map_output, target_crs, "MAP")
+                    if reprojected_map:
+                        self.inputs["map_output"] = reprojected_map
+                        reproject_time = datetime.now() - reproject_start
+                        self.processing_times["Riproiezione MAP"] = reproject_time
+                
+                # Riproietta PLE se esiste
+                if original_ple_output and os.path.exists(original_ple_output):
+                    reproject_start = datetime.now()
+                    reprojected_ple = self.reproject_layer(original_ple_output, target_crs, "PLE")
+                    if reprojected_ple:
+                        self.inputs["ple_output"] = reprojected_ple
+                        reproject_time = datetime.now() - reproject_start
+                        self.processing_times["Riproiezione PLE"] = reproject_time
 
             self.log_message.emit("\nElaborazione completata!")
             self.setProgress(100)  # 100% a elaborazione completata
@@ -978,7 +1016,8 @@ class GmlProcessingTask(QgsTask):
                 'ple_output': self.inputs.get("ple_output", None) if ple_count > 0 else None,
                 'temp_dir': temp_dir,
                 'processing_times': self.processing_times,
-                'load_layers': self.inputs.get("load_layers", False)  # Aggiungi l'opzione load_layers
+                'load_layers': self.inputs.get("load_layers", False),
+                'target_crs': self.inputs.get("target_crs", "EPSG:6706")  # Aggiungi il CRS target ai risultati
             }
             
             return True
@@ -1203,3 +1242,44 @@ class GmlProcessingTask(QgsTask):
     def finished(self, result):
         """Viene chiamato quando il task è completato"""
         self.task_completed.emit(result, self.result)
+
+    def reproject_layer(self, input_file, target_crs, file_type):
+        """Riproietta un layer vettoriale nel CRS specificato"""
+        try:
+            self.log_message.emit(f"Riproiezione del layer {file_type} nel sistema {target_crs}...")
+            
+            # Crea il nome del file di output con il suffisso del CRS
+            basename = os.path.splitext(input_file)[0]
+            extension = os.path.splitext(input_file)[1]
+            crs_suffix = target_crs.replace(":", "_")  # Trasforma "EPSG:4326" in "EPSG_4326"
+            output_file = f"{basename}_{crs_suffix}{extension}"
+            
+            # Se il file esiste già, rimuovilo
+            if os.path.exists(output_file):
+                try:
+                    os.remove(output_file)
+                    self.log_message.emit(f"File riproiettato esistente rimosso: {os.path.basename(output_file)}")
+                except Exception as e:
+                    self.log_message.emit(f"ATTENZIONE: Impossibile rimuovere il file riproiettato esistente: {str(e)}")
+                    # Usa un timestamp per evitare conflitti
+                    output_file = f"{basename}_{crs_suffix}_{int(time.time())}{extension}"
+            
+            # Parametri per la riproiezione
+            params = {
+                'INPUT': input_file,
+                'TARGET_CRS': target_crs,
+                'OUTPUT': output_file
+            }
+            
+            # Esegui la riproiezione
+            result = processing.run("native:reprojectlayer", params)
+            output_file = result['OUTPUT']
+            
+            self.log_message.emit(f"Riproiezione completata: {os.path.basename(output_file)}")
+            return output_file
+        
+        except Exception as e:
+            self.log_message.emit(f"ERRORE durante la riproiezione del layer {file_type}: {str(e)}")
+            import traceback
+            self.log_message.emit(f"Dettagli: {traceback.format_exc()}")
+            return None
