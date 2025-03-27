@@ -17,7 +17,7 @@
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
- *   any later version.                                   *
+ *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
 """
@@ -603,16 +603,14 @@ class GmlProcessingTask(QgsTask):
                 province_zips = [f for f in main_zip.namelist() if f.endswith('.zip')]
                 
                 # Filtra per province selezionate
-                is_matching_province = lambda prov_name, codes: any(code in prov_name.upper() for code in codes)
-
-                filtered_province_zips = [
-                    prov_zip for prov_zip in province_zips 
-                    if is_matching_province(os.path.basename(prov_zip), province_codes)
-                ]
-
-                for prov_zip_path in filtered_province_zips:
-                    prov_name = os.path.basename(prov_zip_path)
-                    self.log_message.emit(f"Provincia trovata: {prov_name}")
+                filtered_province_zips = []
+                for prov_zip in province_zips:
+                    prov_name = os.path.basename(prov_zip)
+                    for code in province_codes:
+                        if code in prov_name.upper():
+                            filtered_province_zips.append(prov_zip)
+                            self.log_message.emit(f"Provincia trovata: {prov_name}")
+                            break
                 
                 if not filtered_province_zips:
                     self.log_message.emit(f"ATTENZIONE: Nessuna provincia trovata con i codici '{self.inputs['province_code']}'")
@@ -675,15 +673,15 @@ class GmlProcessingTask(QgsTask):
                                             if file_name in extracted_files:
                                                 continue
                                                 
-                                            # Invece di usare complessi if/else
-                                            is_required_file = lambda filename, filetype: \
-                                                (("_ple" in filename.lower() and filetype in ["Particelle (PLE)", "Entrambi"]) or \
-                                                 ("_map" in filename.lower() and filetype in ["Mappe (MAP)", "Entrambi"]))
-
-                                            # Quindi nel ciclo
-                                            if is_required_file(file_name, self.inputs["file_type"]):
+                                            # Verifica il tipo di file e se è richiesto
+                                            is_ple = "_ple" in file_name.lower()
+                                            is_map = "_map" in file_name.lower()
+                                            
+                                            if (is_ple and self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]) or \
+                                               (is_map and self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]):
+                                                
                                                 # Determina la cartella di destinazione
-                                                dest_folder = ple_folder if "_ple" in file_name.lower() else map_folder
+                                                dest_folder = ple_folder if is_ple else map_folder
                                                 dest_path = os.path.join(dest_folder, file_name)
                                                 
                                                 # Estrai il file nella cartella appropriata
@@ -692,7 +690,7 @@ class GmlProcessingTask(QgsTask):
                                                     shutil.copyfileobj(source, target)
                                                 
                                                 # Aggiorna contatori
-                                                if "_ple" in file_name.lower():
+                                                if is_ple:
                                                     ple_count += 1
                                                 else:
                                                     map_count += 1
@@ -917,23 +915,24 @@ class GmlProcessingTask(QgsTask):
                     changes_buffer = {}
                     
                     # Usa una singola passata per elaborare tutti i dati
-                    extract_foglio = lambda gml_id: gml_id[32:36] if len(gml_id) > 36 else ""
-                    extract_particella = lambda gml_id: gml_id[39:] if len(gml_id) > 39 else ""
-                    extract_sez_censuaria = lambda gml_id: gml_id[31:32] if len(gml_id) > 32 else ""
-
                     for feature in output_layer.getFeatures():
                         feature_id = feature.id()
                         gml_id = feature[gml_id_idx]
                         
-                        changes_buffer[feature_id] = {
-                            foglio_idx: extract_foglio(gml_id)
-                        }
-                        
-                        if needs_particella:
-                            changes_buffer[feature_id][particella_idx] = extract_particella(gml_id)
-                        
-                        if needs_sez_censuaria:
-                            changes_buffer[feature_id][sez_censuaria_idx] = extract_sez_censuaria(gml_id)
+                        # Estrai foglio (posizioni 32-36) con controllo più efficiente
+                        if len(gml_id) > 36:
+                            foglio = gml_id[32:36]
+                            changes_buffer[feature_id] = {foglio_idx: foglio}
+                            
+                            # Estrai particella per PLE (dalla posizione 39 in poi)
+                            if needs_particella and len(gml_id) > 39:
+                                particella = gml_id[39:]
+                                changes_buffer[feature_id][particella_idx] = particella
+                            
+                            # Estrai sezione censuaria per PLE (carattere in posizione 32)
+                            if needs_sez_censuaria and len(gml_id) > 32:
+                                sez_censuaria = gml_id[31:32]
+                                changes_buffer[feature_id][sez_censuaria_idx] = sez_censuaria
                     
                     # Applica tutte le modifiche in batch
                     batch_size = 5000  # Dimensione del batch per evitare operazioni troppo grandi
@@ -1022,14 +1021,12 @@ class GmlProcessingTask(QgsTask):
                     # Usa un timestamp per evitare conflitti
                     output_file = f"{basename}_{crs_suffix}_{int(time.time())}{extension}"
             
-            # Invece di creare manualmente i dizionari di parametri
-            create_reproject_params = lambda input_file, target_crs, output_file: {
+            # Parametri per la riproiezione
+            params = {
                 'INPUT': input_file,
                 'TARGET_CRS': target_crs,
                 'OUTPUT': output_file
             }
-
-            params = create_reproject_params(input_file, target_crs, output_file)
             
             # Esegui la riproiezione
             result = processing.run("native:reprojectlayer", params)
