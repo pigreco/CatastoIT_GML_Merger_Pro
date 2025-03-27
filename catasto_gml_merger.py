@@ -30,6 +30,7 @@ import shutil
 import io
 import os.path
 import tempfile
+import traceback  # Aggiungi questa importazione
 import urllib.request
 from datetime import datetime, timedelta
 from zipfile import ZipFile
@@ -342,9 +343,8 @@ class catasto_gml_merger:
                     log_message(f"{key}: {value}")
                 log_message("-------------------------------")
                 
-                # Crea e configura il task con timeout più lungo
+                # Crea il task senza impostare expiration
                 task = GmlProcessingTask('Elaborazione GML', inputs)
-                task.setExpiration(360000)  # Aumento a 360.000 millisecondi (6 minuti)
                 
                 # Connetti i segnali agli slot
                 task.log_message.connect(log_message)
@@ -358,8 +358,11 @@ class catasto_gml_merger:
                 log_message("<span style='color:blue;'>Puoi continuare a lavorare in QGIS, riduci a icona il Plugin!</span>")
                 
             except Exception as e:
-                log_message(f"<span style='color:red;font-weight:bold;'>Si è verificato un errore durante l'avvio del task: {str(e)}</span>")
-                log_message(f"<span style='color:red;'>Dettagli errore:\n{traceback.format_exc()}</span>")
+                import traceback  # Importazione locale in caso di errore
+                error_msg = f"<span style='color:red;font-weight:bold;'>Si è verificato un errore durante l'avvio del task: {str(e)}</span>"
+                detail_msg = f"<span style='color:red;'>Dettagli errore:\n{traceback.format_exc()}</span>"
+                log_message(error_msg)
+                log_message(detail_msg)
                 self.reset_processing_state()
 
         def pulisci_temporanea():
