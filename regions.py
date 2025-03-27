@@ -2,7 +2,7 @@ REGIONS = [
     "ABRUZZO", "BASILICATA", "CALABRIA", "CAMPANIA", "EMILIA-ROMAGNA",
     "FRIULI-VENEZIA-GIULIA", "LAZIO", "LIGURIA", "LOMBARDIA", "MARCHE",
     "MOLISE", "PIEMONTE", "PUGLIA", "SARDEGNA", "SICILIA", "TOSCANA", 
-    "TRENTINO-ALTO-ADIGE", "UMBRIA", "VALLE-AOSTA", "VENETO"
+    "UMBRIA", "VALLE-AOSTA", "VENETO"
 ]
 
 # Dizionario delle province italiane organizzate per regione (con sigle in maiuscolo)
@@ -39,8 +39,6 @@ PROVINCES_BY_REGION = {
     
     "TOSCANA": ["AR", "FI", "GR", "LI", "LU", "MS", "PI", "PT", "PO", "SI"],
     
-    "TRENTINO-ALTO-ADIGE": ["BZ", "TN"],
-    
     "UMBRIA": ["PG", "TR"],
     
     "VALLE-AOSTA": ["AO"],
@@ -71,7 +69,6 @@ PROVINCE_CODES_TO_NAMES = {
     "PA": "Palermo", "RG": "Ragusa", "SR": "Siracusa", "TP": "Trapani",
     "AR": "Arezzo", "FI": "Firenze", "GR": "Grosseto", "LI": "Livorno", "LU": "Lucca", 
     "MS": "Massa-Carrara", "PI": "Pisa", "PT": "Pistoia", "PO": "Prato", "SI": "Siena",
-    "BZ": "Bolzano", "TN": "Trento",
     "PG": "Perugia", "TR": "Terni",
     "AO": "Aosta",
     "BL": "Belluno", "PD": "Padova", "RO": "Rovigo", "TV": "Treviso", "VE": "Venezia", "VR": "Verona", "VI": "Vicenza"
