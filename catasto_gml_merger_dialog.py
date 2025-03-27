@@ -29,6 +29,8 @@ from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtWidgets import QProgressBar, QPushButton
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import Qt
+# from qgis.gui import QgsProjectionSelectionWidget  # Aggiungi questa importazione
+# from qgis.core import QgsCoordinateReferenceSystem  # Aggiungi questa importazione
 from .regions import REGIONS, get_provinces
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
@@ -45,11 +47,11 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         # Aggiungi il pulsante di minimizzazione
         self.setWindowFlags(self.windowFlags() | Qt.WindowMinimizeButtonHint)
         
-        # Aggiungi ProgressBar e pulsante di annullamento
-        # if not hasattr(self, 'progressBar'):
-            # self.progressBar = QProgressBar(self)
-            # self.progressBar.setVisible(False)
-            # self.layout().addWidget(self.progressBar)
+        # Aggiungi il widget di selezione CRS
+        # self.mQgsProjectionSelectionWidget = QgsProjectionSelectionWidget(self)
+        # self.mQgsProjectionSelectionWidget.setCrs(QgsCoordinateReferenceSystem('EPSG:6706'))
+        # Aggiungi il widget al layout appropriato - modifica in base alla tua UI
+        # self.layout().addWidget(self.mQgsProjectionSelectionWidget)
             
         if not hasattr(self, 'btn_cancel'):
             self.btn_cancel = QPushButton("Annulla", self)
@@ -59,9 +61,10 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         
         # Imposta il placeholder per il widget di selezione cartella
         self.le_folder.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\munnizza")
-        # Aggiungi placeholders agli altri widget di selezione file
-        self.le_map_output.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\munnizza\\mappe.gpkg")
-        self.le_ple_output.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\munnizza\\particella.gpkg")
+        
+        # Imposta i placeholder direttamente sui QLineEdit (non più QgsFileWidget)
+        self.le_map_output.setPlaceholderText("Solo nome file (es. mappe_catastali)")
+        self.le_ple_output.setPlaceholderText("Solo nome file (es. particelle_catastali)")
         self.le_url.setPlaceholderText("ES: https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/GetDataset.php?dataset=SICILIA.zip")
         
         # Configura il pulsante per mostrare/nascondere la guida
@@ -70,22 +73,25 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         # Popola il combobox delle regioni
         self.populate_regions()
         
-        # Imposta i filtri per i file di output
-        self.le_map_output.setFilter('*.gpkg')
-        self.le_ple_output.setFilter('*.gpkg')
+        # Non possiamo più usare setFilter su QLineEdit perché non è un QgsFileWidget
+        # self.le_map_output.setFilter('*.gpkg')
+        # self.le_ple_output.setFilter('*.gpkg')
         
         def updateFileType():
             ext = self.cb_format.currentText().lower()
-            self.le_map_output.setFilter('*.' + ext)
-            self.le_ple_output.setFilter('*.' + ext)
+            # Non possiamo più usare setFilter o filePath su QLineEdit
+            # Invece, possiamo aggiornare il placeholder text per riflettere il formato
+            self.le_map_output.setPlaceholderText(f"Solo nome file (es. mappe_catastali.{ext})")
+            self.le_ple_output.setPlaceholderText(f"Solo nome file (es. particelle_catastali.{ext})")
             
-            if self.le_map_output.filePath():
-                base_path = self.le_map_output.filePath().split('.')[0]
-                self.le_map_output.setFilePath(base_path + '.' + ext)
+            # Per aggiornare l'estensione nei campi esistenti, dovremmo:
+            if self.le_map_output.text():
+                base_path = self.le_map_output.text().split('.')[0]
+                self.le_map_output.setText(f"{base_path}.{ext}")
             
-            if self.le_ple_output.filePath():
-                base_path = self.le_ple_output.filePath().split('.')[0]
-                self.le_ple_output.setFilePath(base_path + '.' + ext)
+            if self.le_ple_output.text():
+                base_path = self.le_ple_output.text().split('.')[0]
+                self.le_ple_output.setText(f"{base_path}.{ext}")
         
         # Connetti il segnale alla funzione
         self.cb_format.currentTextChanged.connect(updateFileType)
@@ -109,8 +115,9 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
            # log_message("\nError: %s : %s" % (dir_path, e.strerror))
 
         self.le_folder.setFilePath("")
-        self.le_map_output.setFilePath("")
-        self.le_ple_output.setFilePath("")
+        # Usando setText invece di setFilePath per i QLineEdit
+        self.le_map_output.setText("")
+        self.le_ple_output.setText("")
         self.cb_file_type.setCurrentIndex(0)
         self.cb_format.setCurrentIndex(0)
         self.cb_region.setCurrentIndex(0)
@@ -135,28 +142,6 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
         
         self.list_provinces.clear()
         self.list_provinces.addItems(provinces)
-
-    # def cancel_operation(self):
-        # """Gestisce l'evento di annullamento dell'operazione in corso."""
-        # self.btn_cancel.setVisible(False)
-        # self.progressBar.setVisible(False)
-        # Aggiungi qui il codice per interrompere qualsiasi operazione in corso
-        # self.text_log.append("Operazione annullata dall'utente.")
-        
-    # def example_usage(self):
-        # """Esempio di utilizzo della progress bar e del pulsante di annullamento."""
-        # self.progressBar.setVisible(False)
-        # self.progressBar.setMinimum(0)
-        # self.progressBar.setMaximum(100)
-        # self.progressBar.setValue(0)
-        # self.btn_cancel.setVisible(False)
-
-        # Durante l'elaborazione
-        # self.progressBar.setValue(50)  # aggiorna il valore
-
-        # A operazione completata
-        # self.progressBar.setVisible(False)
-        # self.btn_cancel.setVisible(False)
         
     def toggle_help_panel(self):
         """Gestisce la visualizzazione/nascondimento del pannello della guida."""
