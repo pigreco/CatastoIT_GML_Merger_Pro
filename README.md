@@ -61,4 +61,80 @@
 
 ## Disclaimer
 
-L'autore del plugin non è un developer ma è riuscito a realizzare il plugin con l'ausilio della AI.
+L'autore del plugin non è un developer professionista ma è riuscito a realizzare il plugin con l'ausilio dell'intelligenza artificiale.
+
+## Licenza
+Questo plugin è rilasciato sotto licenza GPL v3. I dati catastali sono di proprietà dell'Agenzia delle Entrate e soggetti alle loro condizioni d'uso.
+
+## Supporto e contributi
+- Per segnalazioni di bug o richieste di funzionalità, utilizzare la sezione Issues su GitHub
+- I contributi sono benvenuti tramite pull request
+- Per domande o supporto, contattare l'autore tramite la pagina del plugin
+
+## Ringraziamenti
+- All'Agenzia delle Entrate per aver reso disponibili i dati catastali in formato aperto
+- Alla comunità QGIS per il supporto e gli strumenti di sviluppo
+- A tutti i beta tester che hanno contribuito a migliorare la stabilità del plugin
+
+## Struttura del plugin
+
+Il plugin è organizzato seguendo una struttura modulare multi-file che ne facilita la manutenzione e l'estensibilità:
+
+```
+CatastoIT_GML_Merger_Pro/
+├── __init__.py              # Punto di ingresso del plugin
+├── metadata.txt            # Metadati del plugin per QGIS
+├── README.md               # Questo file di documentazione
+├── LICENSE                 # Licenza GPL v3
+├── core/                   # Funzionalità core del plugin
+│   ├── __init__.py
+│   ├── processor.py        # Classe principale di elaborazione
+│   ├── downloader.py       # Gestione del download dei dati
+│   ├── extractor.py        # Estrazione e decompressione
+│   ├── reprojector.py      # Riproiezione dei dati
+│   └── merger.py           # Unione dei file GML
+├── gui/                    # Interfaccia utente
+│   ├── __init__.py
+│   ├── main_dialog.py      # Finestra principale
+│   ├── progress_dialog.py  # Finestra di progresso
+│   └── region_selector.py  # Widget per selezione regioni
+├── utils/                  # Utilità varie
+│   ├── __init__.py
+│   ├── file_utils.py       # Utilità per file e cartelle
+│   ├── log_utils.py        # Sistema di logging
+│   ├── gis_utils.py        # Funzioni GIS
+│   └── config.py           # Configurazioni
+├── resources/              # Risorse del plugin
+│   ├── icons/              # Icone
+│   ├── styles/             # Stili QGIS
+│   └── ui/                 # File UI
+└── img/                    # Immagini per documentazione
+```
+
+### Componenti principali
+
+1. **Core**: Contiene le classi principali che gestiscono la logica di business del plugin:
+   - `processor.py`: Orchestratore del flusso di elaborazione completo
+   - `downloader.py`: Gestisce il download dei dati catastali
+   - `extractor.py`: Si occupa dell'estrazione dei file ZIP
+   - `reprojector.py`: Gestisce la riproiezione dei dati
+   - `merger.py`: Unisce i file GML in un unico file
+
+2. **GUI**: Include i componenti dell'interfaccia utente:
+   - `main_dialog.py`: Finestra principale del plugin
+   - `progress_dialog.py`: Mostra l'avanzamento dell'elaborazione
+   - `region_selector.py`: Widget per la selezione della regione
+
+3. **Utils**: Contiene funzioni di utilità generica:
+   - `file_utils.py`: Funzioni per la gestione di file e cartelle
+   - `log_utils.py`: Sistema di logging
+   - `gis_utils.py`: Funzioni specifiche per le operazioni GIS
+   - `config.py`: Configurazioni generali e costanti
+
+4. **Resources**: Contiene le risorse statiche del plugin come icone, stili QGIS e file UI
+
+Questa architettura modulare facilita:
+- Manutenzione: ogni componente ha responsabilità ben definite
+- Testing: è possibile testare singolarmente ciascun modulo
+- Estensibilità: nuove funzionalità possono essere aggiunte facilmente
+- Collaborazione: più sviluppatori possono lavorare su componenti diversi
