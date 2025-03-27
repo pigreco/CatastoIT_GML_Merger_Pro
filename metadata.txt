@@ -10,7 +10,7 @@ version=0.3
 author=Salvatore Fiandaca, Giulio Fattori
 email=pigrecoinfinito@gmail.com
 
-about= <b>Catasto IT GML Merger Pro</b> è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano. Il plugin permette di scaricare con file di mappa (MAP) e particelle (PLE), convertendoli nel formato GPKG e estrae il foglio e la particella in attributi separati per un'integrazione completa nei flussi di lavoro GIS.<br><br> EN: It is an advanced plugin for QGIS that allows downloading, extracting, and merging GML files from the Italian land registry. The plugin enables working with map files (MAP) and parcel files (PLE), converting them into formats GPKG, and extracts the sheet and parcel into separate attributes for seamless integration into GIS workflows.
+about= <b>Catasto IT GML Merger Pro</b> è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano. Il plugin permette di scaricare i file di mappa (MAP) e particelle (PLE), convertendoli nel formato GPKG e estrae il foglio e la particella in attributi separati per un'integrazione completa nei flussi di lavoro GIS, il plugin lavora in Background..<br><br> EN: It is an advanced plugin for QGIS that allows downloading, extracting, and merging GML files from the Italian land registry. The plugin enables working with map files (MAP) and parcel files (PLE), converting them into formats GPKG, and extracts the sheet and parcel into separate attributes for seamless integration into GIS workflows.
 
 tracker=https://github.com/pigreco/CatastoIT_GML_Merger_Pro/issues
 repository=https://github.com/pigreco/CatastoIT_GML_Merger_Pro/blob/main/README.md
