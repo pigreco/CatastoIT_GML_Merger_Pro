@@ -13,10 +13,12 @@ class GmlProcessor:
     """Gestisce l'elaborazione completa dei file GML"""
     
     def __init__(self, task):
-        self.task = task
-        self.downloader = CatastoDownloader(task)
-        self.extractor = CatastoExtractor(task)
-        self.reprojector = CatastoReprojector(task)
+        self.task = task  # riferimento al task principale
+        self.context = ssl.create_default_context(cafile=certifi.where())
+        self.timeout = 180  # aumento timeout a 180 secondi
+        # Disabilita temporaneamente la verifica del certificato
+        self.context.check_hostname = False
+        self.context.verify_mode = ssl.CERT_NONE
         
     def process(self):
         """Esegue il processo completo di elaborazione"""
@@ -25,7 +27,7 @@ class GmlProcessor:
             # Creazione directory temporanea
             temp_dir = tempfile.mkdtemp()
             self.task.directory_temporanea = temp_dir
-            self.task.log_message.emit(f"Directory temporanea creata: {temp_dir}\n")
+            self.task.log_message.emit(f"Directory temporanea creata: {temp_dir}")
             
             # Creazione cartelle output
             map_folder = os.path.join(temp_dir, "map_files")
@@ -33,16 +35,31 @@ class GmlProcessor:
             
             if self.task.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
                 os.makedirs(map_folder, exist_ok=True)
+                self.task.log_message.emit(f"Cartella MAP creata: {map_folder}")
             
             if self.task.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
                 os.makedirs(ple_folder, exist_ok=True)
+                self.task.log_message.emit(f"Cartella PLE creata: {ple_folder}")
             
             # Download file
+            self.task.log_message.emit("Avvio fase di download...")
             main_zip_path = self.downloader.download_main_zip(
                 self.task.inputs["url"], temp_dir)
             
             if not main_zip_path or not os.path.exists(main_zip_path):
-                self.task.log_message.emit("Download fallito")
+                self.task.log_message.emit("<span style='color:red;font-weight:bold;'>Download fallito. Impossibile continuare.</span>")
+                return False
+            
+            self.task.log_message.emit(f"File scaricato: {main_zip_path}")
+            self.task.log_message.emit(f"Dimensione: {os.path.getsize(main_zip_path)} bytes")
+            
+            # Controllo se il file è un archivio ZIP valido
+            try:
+                with zipfile.ZipFile(main_zip_path, 'r') as zip_test:
+                    file_list = zip_test.namelist()
+                    self.task.log_message.emit(f"Archivio ZIP valido. Contiene {len(file_list)} file.")
+            except zipfile.BadZipFile:
+                self.task.log_message.emit("<span style='color:red;font-weight:bold;'>Il file scaricato non è un archivio ZIP valido!</span>")
                 return False
             
             # Estrai e processa i file

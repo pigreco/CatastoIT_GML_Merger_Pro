@@ -328,10 +328,6 @@ class catasto_gml_merger:
                 self.dlg.btn_stop.setEnabled(True)
                 self.dlg.btn_process.setEnabled(False)
                 
-                # Inizializza la progress bar
-                # self.dlg.progressBar.setValue(0)
-                # self.dlg.progressBar.setVisible(True)
-                
                 inputs = collect_inputs()
                 if not inputs:
                     log_message("Operazione annullata: verifica i parametri inseriti")
@@ -340,11 +336,17 @@ class catasto_gml_merger:
                 
                 self.dlg.setWindowTitle("Catasto IT GML Merger PRO - Elaborazione in corso")
                 
-                # Crea e configura il task
+                # Logga i parametri di input per debug
+                log_message("--- PARAMETRI DI ELABORAZIONE ---")
+                for key, value in inputs.items():
+                    log_message(f"{key}: {value}")
+                log_message("-------------------------------")
+                
+                # Crea e configura il task con timeout più lungo
                 task = GmlProcessingTask('Elaborazione GML', inputs)
+                task.setExpiration(360000)  # Aumento a 360.000 millisecondi (6 minuti)
                 
                 # Connetti i segnali agli slot
-                # task.progress_changed.connect(self.update_progress)
                 task.log_message.connect(log_message)
                 task.task_completed.connect(self.on_task_completed)
                 
@@ -352,12 +354,12 @@ class catasto_gml_merger:
                 QgsApplication.taskManager().addTask(task)
                 self.current_task = task
                 
-                log_message("Task avviato in background...(Puoi continuare a lavorare in QGIS, riduci a icona il Plugin!)")
+                log_message("<span style='color:blue;'>Task avviato in background...</span>")
+                log_message("<span style='color:blue;'>Puoi continuare a lavorare in QGIS, riduci a icona il Plugin!</span>")
                 
             except Exception as e:
-                log_message(f"\nSi è verificato un errore durante l'avvio del task: {str(e)}")
-                import traceback
-                log_message(f"\nDettagli errore:\n{traceback.format_exc()}")
+                log_message(f"<span style='color:red;font-weight:bold;'>Si è verificato un errore durante l'avvio del task: {str(e)}</span>")
+                log_message(f"<span style='color:red;'>Dettagli errore:\n{traceback.format_exc()}</span>")
                 self.reset_processing_state()
 
         def pulisci_temporanea():
