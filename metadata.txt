@@ -6,7 +6,7 @@
 name=CatastoIT_GML_Merger_Pro
 qgisMinimumVersion=3.22
 description=CatastoIT_GML_Merger_Pro
-version=0.3
+version=0.4
 author=Salvatore Fiandaca, Giulio Fattori
 email=pigrecoinfinito@gmail.com
 
@@ -21,8 +21,9 @@ repository=https://github.com/pigreco/CatastoIT_GML_Merger_Pro/blob/main/README.
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
 # changelog= v 0.1 Scarica set particelle e mappe catastali per regione e in vari formati
-# changelog= v 0.2 Scarica set particelle e mappe catastali per regione e in vari formati ee estrae sezioni censuarie
+# changelog= v 0.2 Scarica set particelle e mappe catastali per regione e in vari formati e estrae sezioni censuarie
 # changelog= v 0.3 Scarica set particelle e mappe catastali per regione e in vari formati e permette riproiezione
+# changelog= v 0.4 Scarica set particelle e mappe catastali per regione e in vari formati, permette riproiezione e aggiunge nomi comune e sigla province
 
 # Tags are comma separated with spaces allowed
 tags=catasto, particelle, fogli, regione, italia
