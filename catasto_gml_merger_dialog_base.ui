@@ -323,19 +323,36 @@
       </widget>
      </item>
      <item row="10" column="1">
-      <widget class="QComboBox" name="cb_format">
-       <property name="toolTip">
-        <string>Seleziona il formato di output (Solo GeoPackage!)</string>
-       </property>
-       <property name="editable">
-        <bool>false</bool>
-       </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_format">
        <item>
-        <property name="text">
-         <string>GPKG</string>
-        </property>
+        <widget class="QComboBox" name="cb_format">
+         <property name="toolTip">
+          <string>Seleziona il formato di output (Solo GeoPackage!)</string>
+         </property>
+         <property name="editable">
+          <bool>false</bool>
+         </property>
+         <item>
+          <property name="text">
+           <string>GPKG</string>
+          </property>
+         </item>
+        </widget>
        </item>
-      </widget>
+       <item>
+        <widget class="QCheckBox" name="cb_joincom">
+         <property name="toolTip">
+          <string>Attiva la modalità JonCom</string>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::RightToLeft</enum>
+         </property>
+         <property name="text">
+          <string>Attiva Join Nomi Comune</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item row="21" column="0" colspan="2">
       <layout class="QHBoxLayout" name="horizontalLayout_2"/>

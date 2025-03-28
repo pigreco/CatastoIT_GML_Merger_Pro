@@ -45,6 +45,7 @@ import processing
 from .resources import *
 # Import the code for the dialog
 from .catasto_gml_merger_dialog import catasto_gml_mergerDialog
+from .join_anpr import JoinANPR  # Importa la nuova classe
 
 directory_temporanea = ""                
 
@@ -776,6 +777,34 @@ class GmlProcessingTask(QgsTask):
                 'load_layers': self.inputs.get("load_layers", False),
                 'target_crs': self.inputs.get("target_crs", "EPSG:6706")  # Aggiungi il CRS target ai risultati
             }
+            
+            # Salva i file di output
+            output_map_gpkg = os.path.join(output_folder, "output_map.gpkg")
+            output_ple_gpkg = os.path.join(output_folder, "output_ple.gpkg")
+            
+            # Esegui la join con il file ANPR se richiesto
+            if self.dlg.cb_joincom.isChecked():
+                self.dlg.label_status.setText("Esecuzione join tabellare con dati ANPR...")
+                QApplication.processEvents()
+                
+                joiner = JoinANPR(self.plugin_dir)
+                
+                # Join per file MAP
+                if os.path.exists(output_map_gpkg):
+                    success, message = joiner.perform_join(output_map_gpkg)
+                    if not success:
+                        self.dlg.label_status.setText(f"Errore join MAP: {message}")
+                        QApplication.processEvents()
+                
+                # Join per file PLE
+                if os.path.exists(output_ple_gpkg):
+                    success, message = joiner.perform_join(output_ple_gpkg)
+                    if not success:
+                        self.dlg.label_status.setText(f"Errore join PLE: {message}")
+                        QApplication.processEvents()
+                
+                self.dlg.label_status.setText("Join con dati ANPR completata")
+                QApplication.processEvents()
             
             return True
             
