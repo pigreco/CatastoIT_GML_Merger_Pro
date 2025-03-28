@@ -778,34 +778,6 @@ class GmlProcessingTask(QgsTask):
                 'target_crs': self.inputs.get("target_crs", "EPSG:6706")  # Aggiungi il CRS target ai risultati
             }
             
-            # Salva i file di output
-            output_map_gpkg = os.path.join(output_folder, "output_map.gpkg")
-            output_ple_gpkg = os.path.join(output_folder, "output_ple.gpkg")
-            
-            # Esegui la join con il file ANPR se richiesto
-            if self.dlg.cb_joincom.isChecked():
-                self.dlg.label_status.setText("Esecuzione join tabellare con dati ANPR...")
-                QApplication.processEvents()
-                
-                joiner = JoinANPR(self.plugin_dir)
-                
-                # Join per file MAP
-                if os.path.exists(output_map_gpkg):
-                    success, message = joiner.perform_join(output_map_gpkg)
-                    if not success:
-                        self.dlg.label_status.setText(f"Errore join MAP: {message}")
-                        QApplication.processEvents()
-                
-                # Join per file PLE
-                if os.path.exists(output_ple_gpkg):
-                    success, message = joiner.perform_join(output_ple_gpkg)
-                    if not success:
-                        self.dlg.label_status.setText(f"Errore join PLE: {message}")
-                        QApplication.processEvents()
-                
-                self.dlg.label_status.setText("Join con dati ANPR completata")
-                QApplication.processEvents()
-            
             return True
             
         except Exception as e:
@@ -910,13 +882,20 @@ class GmlProcessingTask(QgsTask):
                 result = processing.run("native:retainfields", filter_params)
                 output_file = result['OUTPUT']
 
+                # Importa il modulo per associare i codici comune
+                from .associa_codici_comuni import cerca_comune_per_codice_catastale
+                
                 # Ottimizzazione della generazione dei campi utilizzando operazioni in batch
                 self.log_message.emit(f"Aggiunta campo 'foglio' al layer {file_type}...")
                 output_layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
                 
                 if output_layer.isValid():
                     # Prepara tutti i campi da aggiungere in una singola operazione
-                    fields_to_add = [QgsField("foglio", QVariant.String)]
+                    fields_to_add = [
+                        QgsField("foglio", QVariant.String),
+                        QgsField("comune", QVariant.String, len=100),  # Nuovo campo 'comune' lungo 100
+                        QgsField("sigla", QVariant.String, len=2)      # Nuovo campo 'sigla' lungo 2
+                    ]
                     if file_type == "PLE":
                         self.log_message.emit("Aggiunta campo 'particella'...")
                         fields_to_add.append(QgsField("particella", QVariant.String))
@@ -935,6 +914,9 @@ class GmlProcessingTask(QgsTask):
                     particella_idx = output_layer.fields().indexFromName("particella") if file_type == "PLE" else -1
                     sez_censuaria_idx = output_layer.fields().indexFromName("sez_censuaria") if file_type == "PLE" and self.inputs.get("add_sezione_censuaria", False) else -1
                     gml_id_idx = output_layer.fields().indexFromName("gml_id")
+                    admin_unit_idx = output_layer.fields().indexFromName("ADMINISTRATIVEUNIT")
+                    comune_idx = output_layer.fields().indexFromName("comune")
+                    sigla_idx = output_layer.fields().indexFromName("sigla")
                     
                     # Calcola valori una sola volta
                     needs_particella = file_type == "PLE" and particella_idx >= 0
@@ -944,14 +926,31 @@ class GmlProcessingTask(QgsTask):
                     changes_buffer = {}
                     
                     # Usa una singola passata per elaborare tutti i dati
+                    self.log_message.emit("Elaborazione dati e compilazione campi...")
+                    feature_count = output_layer.featureCount()
+                    processed = 0
+                    update_frequency = max(1, feature_count // 10)  # Aggiorna il log ogni 10% circa
+                    
                     for feature in output_layer.getFeatures():
                         feature_id = feature.id()
                         gml_id = feature[gml_id_idx]
+                        admin_unit = feature[admin_unit_idx]
+                        
+                        # Incrementa il contatore e aggiorna il log periodicamente
+                        processed += 1
+                        if processed % update_frequency == 0:
+                            self.log_message.emit(f"Elaborazione feature: {processed}/{feature_count} ({int(100 * processed/feature_count)}%)")
+                            if self.isCanceled():
+                                output_layer.rollBack()
+                                self.log_message.emit("Operazione annullata dall'utente")
+                                return None
+                        
+                        changes_buffer[feature_id] = {}
                         
                         # Estrai foglio (posizioni 32-36) con controllo più efficiente
                         if len(gml_id) > 36:
                             foglio = gml_id[32:36]
-                            changes_buffer[feature_id] = {foglio_idx: foglio}
+                            changes_buffer[feature_id][foglio_idx] = foglio
                             
                             # Estrai particella per PLE (dalla posizione 39 in poi)
                             if needs_particella and len(gml_id) > 39:
@@ -962,10 +961,23 @@ class GmlProcessingTask(QgsTask):
                             if needs_sez_censuaria and len(gml_id) > 32:
                                 sez_censuaria = gml_id[31:32]
                                 changes_buffer[feature_id][sez_censuaria_idx] = sez_censuaria
+                        
+                        # Aggiungi informazioni del comune usando il codice catastale presente in ADMINISTRATIVEUNIT
+                        if admin_unit and admin_unit.strip():
+                            # Il codice ha 4 caratteri, alcuni potrebbero avere spazi iniziali
+                            codice_catastale = admin_unit.strip()
+                            comune_info = cerca_comune_per_codice_catastale(codice_catastale)
+                            
+                            if comune_info:
+                                # Aggiorna il valore del comune e sigla provincia
+                                changes_buffer[feature_id][comune_idx] = comune_info['denominazione']
+                                changes_buffer[feature_id][sigla_idx] = comune_info['sigla_provincia']
                     
                     # Applica tutte le modifiche in batch
                     batch_size = 5000  # Dimensione del batch per evitare operazioni troppo grandi
                     batch_count = 0
+                    self.log_message.emit("Applicazione modifiche al layer...")
+                    
                     for feature_id, attrs in changes_buffer.items():
                         for field_idx, value in attrs.items():
                             output_layer.changeAttributeValue(feature_id, field_idx, value)
@@ -980,6 +992,7 @@ class GmlProcessingTask(QgsTask):
                     success = output_layer.commitChanges()
                     if success:
                         self.log_message.emit(f"Campi calcolati correttamente per il layer {file_type}")
+                        self.log_message.emit(f"Aggiunte informazioni sui comuni ({output_layer.featureCount()} features elaborate)")
                     else:
                         self.log_message.emit(f"ERRORE: Impossibile aggiornare i campi per il layer {file_type}")
                         self.log_message.emit(str(output_layer.commitErrors()))
