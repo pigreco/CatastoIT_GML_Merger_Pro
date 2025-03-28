@@ -17,7 +17,7 @@
 8. **Filtro geografico**: Possibilità di selezionare più province
 9. **Report statistico**: Generazione automatica di report sui dati elaborati
 10. **Supporto sezione censuaria**: Possibilità di aggiungere automaticamente la sezione censuaria nelle Particelle
-11. **Riproiezione dati**: Possibilità di riproiettare i dati catastali in altri sistemi di riferimento (CRS) oltre al nativo RDN2008/ETRF2000 (EPSG:7794)
+11. **Riproiezione dati**: Possibilità di riproiettare i dati catastali in altri sistemi di riferimento (CRS) oltre al nativo (EPSG:6706)
 
 ## Come utilizzare il plugin
 
