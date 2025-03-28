@@ -60,7 +60,7 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
             self.layout().addWidget(self.btn_cancel)
         
         # Imposta il placeholder per il widget di selezione cartella
-        self.le_folder.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\munnizza")
+        self.le_folder.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\dati")
         
         # Imposta i placeholder direttamente sui QLineEdit (non più QgsFileWidget)
         self.le_map_output.setPlaceholderText("Solo nome file (es. mappe_catastali)")

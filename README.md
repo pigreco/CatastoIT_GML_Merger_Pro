@@ -1,7 +1,7 @@
 # Guida al plugin CatastoIT_GML_Merger_Pro per QGIS
 
 ## Descrizione generale
-**CatastoIT_GML_Merger_Pro** è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano. Il plugin permette di lavorare con file di mappa (MAP) e particelle (PLE), convertendoli nel formato GPKG e aggiungendo i campi foglio e particella per un'integrazione completa nei flussi di lavoro GIS.
+**CatastoIT_GML_Merger_Pro** è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano. Il plugin permette di lavorare con file di mappa (MAP) e particelle (PLE), convertendoli nel formato GPKG e aggiungendo i campi foglio (LABEL) e particella (LABEL) per un'integrazione completa nei flussi di lavoro GIS.
 
 ![](./img/gui.png)
 
@@ -17,8 +17,8 @@
 8. **Filtro geografico**: Possibilità di selezionare più province
 9. **Report statistico**: Generazione automatica di report sui dati elaborati
 10. **Supporto sezione censuaria**: Possibilità di aggiungere automaticamente la sezione censuaria nelle Particelle
-11. **Riproiezione dati**: Possibilità di riproiettare i dati catastali in altri sistemi di riferimento (CRS) oltre al nativo (EPSG:6706)
-12. **Aggiunta nomi Comune e Sigla province**: Possibilità di attivare l'aggiunta dei nomi dei comuni e le sigle delle province in due attributi separati
+11. **Riproiezione dati**: Riproiettare i dati catastali in altri sistemi di riferimento (CRS) oltre al nativo (EPSG:6706)
+12. **Aggiunta nomi Comune**: Estrae i nomi dei comuni
 
 ## Come utilizzare il plugin
 
@@ -49,8 +49,7 @@
   - Campo **Foglio**: estratto automaticamente dai dati originali per rapida consultazione
   - Campo **Particella**: numero identificativo della particella catastale, elaborato dal codice originale
   - Campo **sez_censuaria**: (opzionale) identifica la sezione censuaria estratta dal codice originale
-  - Campo **DENOMINAZIONE_IT**: nome del comune
-  - Campo **SIGLAPROVINCA**: sigla della provincia
+  - Campo **comune**: nome del comune
 - La combinazione di questi campi consente ricerche e filtraggio immediato dei dati catastali
 - Gli attributi originali vengono mantenuti per compatibilità con altri sistemi
 - I dati vengono forniti nel sistema di coordinate (CRS) scelto dall'utente durante l'elaborazione

@@ -38,6 +38,7 @@ from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator, QVariant,
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QApplication, QListWidget
 from qgis.core import Qgis, QgsField, QgsMessageLog, QgsProject, QgsVectorLayer, QgsTask, QgsApplication
+from qgis.analysis import QgsNativeAlgorithms  # Aggiungi questa importazione
 import processing
 
 # -- Import moduli locali del progetto --
@@ -84,6 +85,9 @@ class catasto_gml_merger:
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
+        # Inizializziamo l'attributo per tenere traccia del task attivo
+        self.current_task = None
+        self.processing_active = False
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -134,7 +138,6 @@ class catasto_gml_merger:
 
         :param add_to_toolbar: Flag indicating whether the action should also
             be added to the toolbar. Defaults to True.
-        :type add_to_toolbar: bool
 
         :param status_tip: Optional text to show in a popup when mouse pointer
             hovers over the action.
@@ -197,6 +200,230 @@ class catasto_gml_merger:
                 action)
             self.iface.removeToolBarIcon(action)
 
+    def log_message(self, msg):
+        """Registra un messaggio nel log e nell'interfaccia utente"""
+        print(msg)
+        QgsMessageLog.logMessage(msg, 'Elaborazione GML')
+        self.dlg.text_log.append(msg)
+        self.dlg.text_log.repaint()
+            
+    def collect_inputs(self):
+        """Raccoglie i parametri di input dall'interfaccia utente"""
+        inputs = {}
+        
+        file_type = self.dlg.cb_file_type.currentText()
+        inputs['file_type'] = file_type
+        print(inputs['file_type'])
+        
+        inputs['main_folder'] = self.dlg.le_folder.filePath()
+        print(inputs['main_folder'])
+        
+        # Verifica che sia stata selezionata una cartella di lavoro
+        if not inputs['main_folder']:
+            self.log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nessuna cartella di lavoro selezionata</span>")
+            return None
+        
+        # Ottieni il CRS selezionato dal widget di proiezione
+        crs = self.dlg.mQgsProjectionSelectionWidget.crs()
+        inputs['target_crs'] = crs.authid() if crs.isValid() else 'EPSG:6706'  # Default a EPSG:6706 se non valido
+        print(f"CRS selezionato: {inputs['target_crs']}")
+        
+        # Verifica lo stato del checkbox per sezione censuaria
+        inputs['add_sezione_censuaria'] = self.dlg.cb_sez_censu.isChecked()
+        if inputs['add_sezione_censuaria']:
+            self.log_message("Opzione 'Aggiungi Sezione Censuaria nelle Particelle' attivata")
+            print("Sezione censuaria attivata")
+        
+        inputs['url'] = self.dlg.le_url.text()
+        if not inputs['url']:
+            self.log_message("<span style='color:red;font-weight:bold;'>ERRORE: URL non specificato</span>")
+            return None
+        print(inputs['url'])
+        
+        # Ottieni le province selezionate dalla list_provinces
+        selected_items = self.dlg.list_provinces.selectedItems()
+        if not selected_items:
+            self.log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nessuna provincia selezionata</span>")
+            return None
+        
+        # Crea una lista di codici provincia dalle selezioni
+        province_codes = [item.text().strip().upper() for item in selected_items]
+        inputs['province_code'] = ','.join(province_codes)
+        inputs['filter_by_province'] = True
+        
+        self.log_message(f"Province selezionate: {inputs['province_code']}")
+        print(f"Province selezionate: {inputs['province_code']}")
+        
+        formats = {
+            'GPKG': '.gpkg'
+        }
+
+        format_name = self.dlg.cb_format.currentText()
+        inputs['format_name'] = format_name
+        inputs['output_extension'] = formats[format_name]
+        print(inputs['output_extension'])
+        
+        if file_type in ['Mappe (MAP)', 'Entrambi']:
+            # Ottieni solo il nome del file, non il percorso
+            map_filename = self.dlg.le_map_output.text()
+            if not map_filename:
+                self.log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nome file di output MAP non specificato</span>")
+                return None
+            
+            # Aggiungi estensione se mancante
+            if not map_filename.endswith(formats[format_name]):
+                map_filename += formats[format_name]
+            
+            # Componi il percorso completo usando la cartella principale
+            map_output = os.path.join(inputs['main_folder'], map_filename)
+            inputs['map_output'] = map_output
+            print(inputs['map_output'])
+        
+        if file_type in ['Particelle (PLE)', 'Entrambi']:
+            # Ottieni solo il nome del file, non il percorso
+            ple_filename = self.dlg.le_ple_output.text()
+            if not ple_filename:
+                self.log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nome file di output PLE non specificato</span>")
+                return None
+            
+            # Aggiungi estensione se mancante
+            if not ple_filename.endswith(formats[format_name]):
+                ple_filename += formats[format_name]
+            
+            # Componi il percorso completo usando la cartella principale
+            ple_output = os.path.join(inputs['main_folder'], ple_filename)
+            inputs['ple_output'] = ple_output
+            print(inputs['ple_output'])
+
+        inputs['load_layers'] = self.dlg.cb_load_layers.isChecked()
+        print(inputs['load_layers'])
+        
+        self.dlg.text_log.clear()
+        self.log_message("<span style='color:green;font-weight:bold;'>Parametri verificati correttamente</span>")
+        
+        return inputs
+
+    def process_gml_files(self):
+        """Avvia il processo di elaborazione dei file GML"""
+        global directory_temporanea
+        
+        # Verifica se c'è già un processo attivo
+        if self.processing_active:
+            self.log_message("<span style='color:red;font-weight:bold;'>Elaborazione già in corso, attendere...</span>")
+            return
+        
+        try:
+            # Inizializza lo stato di elaborazione
+            self.processing_active = True
+            
+            # Abilita il pulsante di stop e disabilita quello di processo
+            self.dlg.btn_stop.setEnabled(True)
+            self.dlg.btn_process.setEnabled(False)
+            
+            # Inizializza la progress bar
+            # self.dlg.progressBar.setValue(0)
+            # self.dlg.progressBar.setVisible(True)
+            
+            inputs = self.collect_inputs()
+            if not inputs:
+                self.log_message("Operazione annullata: verifica i parametri inseriti")
+                self.reset_processing_state()
+                return
+            
+            self.dlg.setWindowTitle("Catasto IT GML Merger PRO - Elaborazione in corso")
+            
+            # Crea e configura il task
+            task = GmlProcessingTask('Elaborazione GML', inputs)
+            
+            # Connetti i segnali agli slot
+            # task.progress_changed.connect(self.update_progress)
+            task.log_message.connect(self.log_message)
+            task.task_completed.connect(self.on_task_completed)
+            
+            # Aggiungi il task al gestore task di QGIS
+            QgsApplication.taskManager().addTask(task)
+            self.current_task = task
+            
+            self.log_message("Task avviato in background...(Puoi continuare a lavorare in QGIS, riduci a icona il Plugin!)")
+            
+        except Exception as e:
+            self.log_message(f"\nSi è verificato un errore durante l'avvio del task: {str(e)}")
+            import traceback
+            self.log_message(f"\nDettagli errore:\n{traceback.format_exc()}")
+            self.reset_processing_state()
+
+    def pulisci_temporanea(self):
+        """Pulisce i file temporanei creati durante l'elaborazione"""
+        global directory_temporanea
+        dir_path = directory_temporanea
+        
+        # Reset della progress bar
+        # self.dlg.progressBar.setValue(0)
+        # self.dlg.progressBar.setVisible(False)
+        
+        if dir_path and os.path.exists(dir_path):
+            # Libera tutti i layer che potrebbero usare file nella directory temporanea
+            for layer_id, layer in list(QgsProject.instance().mapLayers().items()):
+                if dir_path in layer.source():
+                    QgsProject.instance().removeMapLayer(layer_id)
+            
+            # Forza garbage collection
+            gc.collect()
+            time.sleep(1)
+            
+            try:
+                for root, dirs, files in os.walk(dir_path, topdown=False):
+                    for file in files:
+                        try:
+                            os.remove(os.path.join(root, file))
+                        except:
+                            self.log_message(f"Impossibile rimuovere {file}")
+                
+                shutil.rmtree(dir_path)
+                self.log_message(f"Directory {dir_path} rimossa correttamente")
+            except OSError as e:
+                self.log_message(f"\nErrore nella pulizia: {str(e)}")
+                self.log_message("Alcuni file temporanei verranno rimossi alla chiusura del Plugin")
+        else:
+            self.log_message("Nessuna directory temporanea da pulire")
+
+        # Resetta l'interfaccia
+        self.dlg.le_folder.setFilePath("")
+        self.dlg.le_map_output.setText("")  # Usa setText invece di setFilePath
+        self.dlg.le_ple_output.setText("")  # Usa setText invece di setFilePath
+        self.dlg.cb_file_type.setCurrentIndex(0)
+        self.dlg.cb_format.setCurrentIndex(0)
+        self.dlg.cb_region.setCurrentIndex(0)
+        self.dlg.list_provinces.clearSelection()  # Cancella le selezioni dalla lista
+        self.dlg.cb_region.setEnabled(True)
+        self.dlg.le_url.setEnabled(True)
+        self.dlg.le_url.clear()
+        self.dlg.text_log.clear()
+        self.dlg.setWindowTitle("Catasto IT GML Merger PRO")
+        
+        # Chiudi il dialog alla fine
+        self.dlg.hide()
+
+    def url_update(self):
+        """Aggiorna l'URL in base alla regione selezionata"""
+        self.dlg.le_url.setText("https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/GetDataset.php?dataset=" + self.dlg.cb_region.currentText() + ".zip")
+        
+    def aggiorna_campi_output(self):
+        """Attiva o disattiva i campi di output in base al tipo di file selezionato"""
+        file_type = self.dlg.cb_file_type.currentText()
+        
+        # Gestisci i widget per l'output MAP
+        map_enabled = file_type in ["Mappe (MAP)", "Entrambi"]
+        self.dlg.le_map_output.setEnabled(map_enabled)
+        
+        # Gestisci i widget per l'output PLE
+        ple_enabled = file_type in ["Particelle (PLE)", "Entrambi"]
+        self.dlg.le_ple_output.setEnabled(ple_enabled)
+        self.dlg.cb_sez_censu.setVisible(ple_enabled)  # Mostra l'opzione sezione censuaria solo quando PLE è abilitato
+        
+        # Aggiorna placeholder text per indicare che è richiesto solo il nome del file
+        self.dlg.le_map_output.setPlaceholderText("Solo nome file (es. mappe_catastali)")
+        self.dlg.le_ple_output.setPlaceholderText("Solo nome file (es. particelle_catastali)")
 
     def run(self):
         """Run method that performs all the real work"""
@@ -205,246 +432,27 @@ class catasto_gml_merger:
             self.first_start = False
             self.dlg = catasto_gml_mergerDialog()
             
-            # Inizializziamo l'attributo per tenere traccia del task attivo
-            self.current_task = None
-            self.processing_active = False
-            
             # Inizializza il widget di proiezione con il CRS predefinito
             from qgis.core import QgsCoordinateReferenceSystem
             self.dlg.mQgsProjectionSelectionWidget.setCrs(QgsCoordinateReferenceSystem('EPSG:6706'))
             
-        self.dlg.show()
-            
-        def log_message(msg):
-            print(msg)
-            QgsMessageLog.logMessage(msg, 'Elaborazione GML')
-            self.dlg.text_log.append(msg)
-            self.dlg.text_log.repaint()
-            
-        def collect_inputs():
-            inputs = {}
-            
-            file_type = self.dlg.cb_file_type.currentText()
-            inputs['file_type'] = file_type
-            print(inputs['file_type'])
-            
-            inputs['main_folder'] = self.dlg.le_folder.filePath()
-            print(inputs['main_folder'])
-            
-            # Verifica che sia stata selezionata una cartella di lavoro
-            if not inputs['main_folder']:
-                log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nessuna cartella di lavoro selezionata</span>")
-                return None
-            
-            # Ottieni il CRS selezionato dal widget di proiezione
-            crs = self.dlg.mQgsProjectionSelectionWidget.crs()
-            inputs['target_crs'] = crs.authid() if crs.isValid() else 'EPSG:6706'  # Default a EPSG:6706 se non valido
-            print(f"CRS selezionato: {inputs['target_crs']}")
-            
-            # Verifica lo stato del checkbox per sezione censuaria
-            inputs['add_sezione_censuaria'] = self.dlg.cb_sez_censu.isChecked()
-            if inputs['add_sezione_censuaria']:
-                log_message("Opzione 'Aggiungi Sezione Censuaria nelle Particelle' attivata")
-                print("Sezione censuaria attivata")
-            
-            inputs['url'] = self.dlg.le_url.text()
-            if not inputs['url']:
-                log_message("<span style='color:red;font-weight:bold;'>ERRORE: URL non specificato</span>")
-                return None
-            print(inputs['url'])
-            
-            # Ottieni le province selezionate dalla list_provinces
-            selected_items = self.dlg.list_provinces.selectedItems()
-            if not selected_items:
-                log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nessuna provincia selezionata</span>")
-                return None
-            
-            # Crea una lista di codici provincia dalle selezioni
-            province_codes = [item.text().strip().upper() for item in selected_items]
-            inputs['province_code'] = ','.join(province_codes)
-            inputs['filter_by_province'] = True
-            
-            log_message(f"Province selezionate: {inputs['province_code']}")
-            print(f"Province selezionate: {inputs['province_code']}")
-            
-            formats = {
-                'GPKG': '.gpkg'
-            }
-
-            format_name = self.dlg.cb_format.currentText()
-            inputs['format_name'] = format_name
-            inputs['output_extension'] = formats[format_name]
-            print(inputs['output_extension'])
-            
-            if file_type in ['Mappe (MAP)', 'Entrambi']:
-                # Ottieni solo il nome del file, non il percorso
-                map_filename = self.dlg.le_map_output.text()
-                if not map_filename:
-                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nome file di output MAP non specificato</span>")
-                    return None
-                
-                # Aggiungi estensione se mancante
-                if not map_filename.endswith(formats[format_name]):
-                    map_filename += formats[format_name]
-                
-                # Componi il percorso completo usando la cartella principale
-                map_output = os.path.join(inputs['main_folder'], map_filename)
-                inputs['map_output'] = map_output
-                print(inputs['map_output'])
-            
-            if file_type in ['Particelle (PLE)', 'Entrambi']:
-                # Ottieni solo il nome del file, non il percorso
-                ple_filename = self.dlg.le_ple_output.text()
-                if not ple_filename:
-                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nome file di output PLE non specificato</span>")
-                    return None
-                
-                # Aggiungi estensione se mancante
-                if not ple_filename.endswith(formats[format_name]):
-                    ple_filename += formats[format_name]
-                
-                # Componi il percorso completo usando la cartella principale
-                ple_output = os.path.join(inputs['main_folder'], ple_filename)
-                inputs['ple_output'] = ple_output
-                print(inputs['ple_output'])
-
-            inputs['load_layers'] = self.dlg.cb_load_layers.isChecked()
-            print(inputs['load_layers'])
-            
-            self.dlg.text_log.clear()
-            log_message("<span style='color:green;font-weight:bold;'>Parametri verificati correttamente</span>")
-            
-            return inputs
-
-        def process_gml_files():
-            global directory_temporanea
-            
-            try:
-                # Inizializza lo stato di elaborazione
-                self.processing_active = True
-                
-                # Abilita il pulsante di stop e disabilita quello di processo
-                self.dlg.btn_stop.setEnabled(True)
-                self.dlg.btn_process.setEnabled(False)
-                
-                # Inizializza la progress bar
-                # self.dlg.progressBar.setValue(0)
-                # self.dlg.progressBar.setVisible(True)
-                
-                inputs = collect_inputs()
-                if not inputs:
-                    log_message("Operazione annullata: verifica i parametri inseriti")
-                    self.reset_processing_state()
-                    return
-                
-                self.dlg.setWindowTitle("Catasto IT GML Merger PRO - Elaborazione in corso")
-                
-                # Crea e configura il task
-                task = GmlProcessingTask('Elaborazione GML', inputs)
-                
-                # Connetti i segnali agli slot
-                # task.progress_changed.connect(self.update_progress)
-                task.log_message.connect(log_message)
-                task.task_completed.connect(self.on_task_completed)
-                
-                # Aggiungi il task al gestore task di QGIS
-                QgsApplication.taskManager().addTask(task)
-                self.current_task = task
-                
-                log_message("Task avviato in background...(Puoi continuare a lavorare in QGIS, riduci a icona il Plugin!)")
-                
-            except Exception as e:
-                log_message(f"\nSi è verificato un errore durante l'avvio del task: {str(e)}")
-                import traceback
-                log_message(f"\nDettagli errore:\n{traceback.format_exc()}")
-                self.reset_processing_state()
-
-        def pulisci_temporanea():
-            global directory_temporanea
-            dir_path = directory_temporanea
-            
-            # Reset della progress bar
-            # self.dlg.progressBar.setValue(0)
-            # self.dlg.progressBar.setVisible(False)
-            
-            if dir_path and os.path.exists(dir_path):
-                # Libera tutti i layer che potrebbero usare file nella directory temporanea
-                for layer_id, layer in list(QgsProject.instance().mapLayers().items()):
-                    if dir_path in layer.source():
-                        QgsProject.instance().removeMapLayer(layer_id)
-                
-                # Forza garbage collection
-                gc.collect()
-                time.sleep(1)
-                
-                try:
-                    for root, dirs, files in os.walk(dir_path, topdown=False):
-                        for file in files:
-                            try:
-                                os.remove(os.path.join(root, file))
-                            except:
-                                log_message(f"Impossibile rimuovere {file}")
-                    
-                    shutil.rmtree(dir_path)
-                    log_message(f"Directory {dir_path} rimossa correttamente")
-                except OSError as e:
-                    log_message(f"\nErrore nella pulizia: {str(e)}")
-                    log_message("Alcuni file temporanei verranno rimossi alla chiusura del Plugin")
-            else:
-                log_message("Nessuna directory temporanea da pulire")
-
-            # Resetta l'interfaccia
-            self.dlg.le_folder.setFilePath("")
-            self.dlg.le_map_output.setText("")  # Usa setText invece di setFilePath
-            self.dlg.le_ple_output.setText("")  # Usa setText invece di setFilePath
-            self.dlg.cb_file_type.setCurrentIndex(0)
-            self.dlg.cb_format.setCurrentIndex(0)
-            self.dlg.cb_region.setCurrentIndex(0)
-            self.dlg.list_provinces.clearSelection()  # Cancella le selezioni dalla lista
-            self.dlg.cb_region.setEnabled(True)
-            self.dlg.le_url.setEnabled(True)
-            self.dlg.le_url.clear()
-            self.dlg.text_log.clear()
-            self.dlg.setWindowTitle("Catasto IT GML Merger PRO")
-            
-            # Chiudi il dialog alla fine
-            self.dlg.hide()
-
-        def url_update():
-            self.dlg.le_url.setText("https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/GetDataset.php?dataset=" + self.dlg.cb_region.currentText() + ".zip")
-            
-        def aggiorna_campi_output():
-            """Attiva o disattiva i campi di output in base al tipo di file selezionato"""
-            file_type = self.dlg.cb_file_type.currentText()
-            
-            # Gestisci i widget per l'output MAP
-            map_enabled = file_type in ["Mappe (MAP)", "Entrambi"]
-            self.dlg.le_map_output.setEnabled(map_enabled)
-            
-            # Gestisci i widget per l'output PLE
-            ple_enabled = file_type in ["Particelle (PLE)", "Entrambi"]
-            self.dlg.le_ple_output.setEnabled(ple_enabled)
-            self.dlg.cb_sez_censu.setVisible(ple_enabled)  # Mostra l'opzione sezione censuaria solo quando PLE è abilitato
-            
-            # Aggiorna placeholder text per indicare che è richiesto solo il nome del file
-            self.dlg.le_map_output.setPlaceholderText("Solo nome file (es. mappe_catastali)")
-            self.dlg.le_ple_output.setPlaceholderText("Solo nome file (es. particelle_catastali)")
+            # Collega i segnali solo la prima volta
+            self.dlg.cb_region.currentIndexChanged.connect(self.url_update)
+            self.dlg.cb_file_type.currentIndexChanged.connect(self.aggiorna_campi_output)                                                       
+            self.dlg.btn_process.clicked.connect(self.process_gml_files)
+            self.dlg.btn_close.clicked.connect(self.pulisci_temporanea)
+            self.dlg.btn_stop.clicked.connect(self.stop_processing)
         
-        self.dlg.cb_region.currentIndexChanged.connect(url_update)
-        self.dlg.cb_file_type.currentIndexChanged.connect(aggiorna_campi_output)                                                       
-        self.dlg.btn_process.clicked.connect(process_gml_files)
-        self.dlg.btn_close.clicked.connect(pulisci_temporanea)
-        self.dlg.btn_stop.clicked.connect(self.stop_processing)  # Ora funzionerà correttamente
-        self.dlg.btn_stop.setEnabled(False)  # Disabilitato all'avvio
+        self.dlg.show()
         
         # Imposta lo stato iniziale dei campi di output
-        aggiorna_campi_output()
+        self.aggiorna_campi_output()
+        self.dlg.btn_stop.setEnabled(False)  # Disabilitato all'avvio
 
     def stop_processing(self):
         """Interrompe il processo di elaborazione in corso"""
         if self.processing_active:
             self.processing_active = False
-            # Utilizziamo la funzione log_message definita nel contesto di run()
             self.dlg.text_log.append("\n<span style='color:red;font-weight:bold;'>Interruzione richiesta dall'utente...</span>")
             self.dlg.text_log.append("L'elaborazione verrà interrotta appena possibile")
             self.dlg.btn_stop.setEnabled(False)
@@ -454,10 +462,6 @@ class catasto_gml_merger:
         self.processing_active = False
         self.dlg.btn_stop.setEnabled(False)
         self.dlg.btn_process.setEnabled(True)
-
-    # def update_progress(self, value):
-        # """Aggiorna la barra di progresso"""
-        # self.dlg.progressBar.setValue(value)
     
     def on_task_completed(self, success, result):
         """Gestisce il completamento del task"""
@@ -715,8 +719,23 @@ class GmlProcessingTask(QgsTask):
             # Esegui l'unione una sola volta per tipo di file
             if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"] and map_count > 0 and not self.isCanceled():
                 self.log_message.emit("\nUnione files MAP\n")
+                self.log_message.emit("Ottimizzazione della memoria prima delle operazioni pesanti...")
+                
+                # Forza il garbage collection e libera memoria
+                try:
+                    gc.collect()
+                    time.sleep(1)
+                    self.log_message.emit("Memoria liberata")
+                    
+                    # Ottimizza le impostazioni di Processing se possibile
+                    from qgis.PyQt.QtCore import QThread
+                    cpu_cores = QThread.idealThreadCount() 
+                    self.log_message.emit(f"CPU disponibili: {cpu_cores}")
+                except Exception as e:
+                    self.log_message.emit(f"Nota: Impossibile ottimizzare la memoria: {str(e)}")
+                
                 map_time = self.merge_files(
-                    map_folder, self.inputs["map_output"], "MAP"
+                    map_folder, self.inputs["map_output"], "MAP", map_count
                 )
                 original_map_output = self.inputs["map_output"]  # Salva il percorso originale
                 self.setProgress(75)  # 75% dopo unione MAP
@@ -727,7 +746,7 @@ class GmlProcessingTask(QgsTask):
                 self.log_message.emit("\nUnione files PLE\n")
                 self.log_message.emit("<span style='color:blue;font-weight:bold;'>Attendere prego, operazione costosa!<br>Puoi ridurre ad icona e continuare a lavorare con QGIS!</span>")
                 ple_time = self.merge_files(
-                    ple_folder, self.inputs["ple_output"], "PLE"
+                    ple_folder, self.inputs["ple_output"], "PLE", map_count  # Passa map_count come parametro
                 )
                 original_ple_output = self.inputs["ple_output"]  # Salva il percorso originale
                 # Se abbiamo già elaborato MAP arriviamo al 100%, altrimenti al 75%
@@ -742,7 +761,8 @@ class GmlProcessingTask(QgsTask):
             # Esegui la riproiezione se necessario
             target_crs = self.inputs.get('target_crs', 'EPSG:6706')
             
-            if target_crs != 'EPSG:6706' and not self.isCanceled():
+            # Rimuovo la condizione che blocca la riproiezione se il target_crs è EPSG:6706
+            if not self.isCanceled():
                 self.log_message.emit(f"\n<span style='color:blue;font-weight:bold;'>Riproiezione dei file al sistema {target_crs}...</span>")
                 
                 # Riproietta MAP se esiste
@@ -787,7 +807,7 @@ class GmlProcessingTask(QgsTask):
             self.exception = e
             return False
     
-    def merge_files(self, source_folder, output_file, file_type):
+    def merge_files(self, source_folder, output_file, file_type, map_count):
         """Metodo per unire i file GML e applicare trasformazioni"""
         start_time = datetime.now()
 
@@ -839,7 +859,6 @@ class GmlProcessingTask(QgsTask):
                         self.log_message.emit(f"File di output esistente rimosso: {output_file}")
                     except Exception as e:
                         self.log_message.emit(f"ATTENZIONE: Impossibile rimuovere il file di output esistente: {str(e)}")
-                        # Modifica il nome del file per evitare conflitti
                         base_name = os.path.splitext(output_file)[0]
                         ext = os.path.splitext(output_file)[1]
                         output_file = f"{base_name}_{int(time.time())}{ext}"
@@ -858,6 +877,22 @@ class GmlProcessingTask(QgsTask):
                 self.log_message.emit(f"Unione file {file_type}...")
                 processing.run("native:mergevectorlayers", merge_params)
 
+                # Aggiungi dopo l'unione ma prima del filtro attributi
+                if file_type == "PLE" and map_count > 10000:
+                    self.log_message.emit("Dataset molto grande, applico ottimizzazioni...")
+                    
+                    # Dividi l'elaborazione in batch se ci sono molte geometrie
+                    simplify_params = {
+                        'INPUT': temp_merge,
+                        'METHOD': 0,  # Distance (Douglas-Peucker)
+                        'TOLERANCE': 0.1,  # Piccola tolleranza per mantenere precisione
+                        'OUTPUT': 'TEMPORARY'
+                    }
+                    
+                    simplified = processing.run("native:simplifygeometries", simplify_params)
+                    temp_merge = simplified['OUTPUT']
+                    self.log_message.emit("Ottimizzazione geometrie completata")
+
                 # Chiudi esplicitamente i riferimenti ai layer che potrebbero utilizzare il file temporaneo
                 for layer_id, layer in list(project.mapLayers().items()):
                     if temp_merge in layer.source():
@@ -871,134 +906,131 @@ class GmlProcessingTask(QgsTask):
                 if output_dir and not os.path.exists(output_dir):
                     os.makedirs(output_dir, exist_ok=True)
 
-                # Processo semplificato: filtro direttamente nel formato desiderato
+                # Processo semplificato: filtro attributi conservando solo quelli necessari
+                filter_fields = ["fid", "gml_id", "ADMINISTRATIVEUNIT"]
+                
+                # Aggiungi LABEL ai campi da conservare
+                if file_type == "MAP":
+                    self.log_message.emit("Utilizzo del campo LABEL per le mappe...")
+                    filter_fields.append("LABEL")  # LABEL contiene il numero del foglio
+                elif file_type == "PLE":
+                    self.log_message.emit("Utilizzo dei campi LABEL e layer per le particelle...")
+                    filter_fields.extend(["LABEL", "layer"])  # LABEL contiene il numero della particella
+                
                 filter_params = {
                     "INPUT": temp_merge,
-                    "FIELDS": ["fid", "gml_id", "ADMINISTRATIVEUNIT"],
+                    "FIELDS": filter_fields,
                     "OUTPUT": output_file
                 }
 
                 self.log_message.emit(f"Filtro attributi per {file_type}...")
                 result = processing.run("native:retainfields", filter_params)
                 output_file = result['OUTPUT']
-
-                # Importa il modulo per associare i codici comune
-                from .associa_codici_comuni import cerca_comune_per_codice_catastale
                 
-                # Ottimizzazione della generazione dei campi utilizzando operazioni in batch
-                self.log_message.emit(f"Aggiunta campo 'foglio' al layer {file_type}...")
-                output_layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
+                # Se è un file PLE, rinomina il campo 'layer' in 'comune' ed estrai il valore centrale
+                if file_type == "PLE":
+                    self.log_message.emit(f"Rinomino il campo 'layer' in 'comune' ed estraggo il valore centrale...")
+                    
+                    try:
+                        # Usa un approccio diretto con QgsVectorLayer invece di SQL
+                        self.log_message.emit("Uso metodo diretto con QgsVectorLayer...")
+                        
+                        # 1. Carica il layer
+                        layer = QgsVectorLayer(output_file, "temp", "ogr")
+                        if not layer.isValid():
+                            self.log_message.emit("ERRORE: Layer non valido")
+                            raise Exception("Layer non valido")
+                            
+                        # 2. Aggiungi un nuovo campo per il comune
+                        layer.dataProvider().addAttributes([QgsField("comune", QVariant.String)])
+                        layer.updateFields()
+                        
+                        # Verifica se bisogna aggiungere anche la sezione censuaria
+                        add_sezione = self.inputs.get('add_sezione_censuaria', False)
+                        if add_sezione:
+                            self.log_message.emit("Aggiungo il campo per la sezione censuaria...")
+                            layer.dataProvider().addAttributes([QgsField("sezione", QVariant.String)])
+                            layer.updateFields()
+                        
+                        # 3. Ricava i valori con un ciclo
+                        comune_idx = layer.fields().indexFromName("comune")
+                        layer_idx = layer.fields().indexFromName("layer")
+                        gml_id_idx = layer.fields().indexFromName("gml_id")
+                        sezione_idx = layer.fields().indexFromName("sezione") if add_sezione else -1
+                        
+                        if comune_idx != -1 and layer_idx != -1:
+                            self.log_message.emit(f"Aggiornamento valori: comune={comune_idx}, layer={layer_idx}")
+                            if add_sezione:
+                                self.log_message.emit(f"Aggiornamento sezione censuaria: sezione={sezione_idx}, gml_id={gml_id_idx}")
+                                
+                            layer.startEditing()
+                            features_count = layer.featureCount()
+                            update_count = 0
+                            sezione_count = 0
+                            
+                            # Per dataset molto grandi, usa un buffer per ottimizzare gli aggiornamenti
+                            changes_buffer = {}
+                            buffer_size = 10000
+                            
+                            # Aggiorna in batch per migliori prestazioni
+                            for i, feature in enumerate(layer.getFeatures()):
+                                feature_id = feature.id()
+                                changes_buffer[feature_id] = {}
+                                
+                                # Aggiorna comune dal campo layer
+                                layer_value = feature[layer_idx]
+                                if layer_value:
+                                    parts = layer_value.split('_')
+                                    if len(parts) > 2:  # Assicurati che ci siano almeno tre parti
+                                        comune_value = parts[1]  # Prendi il valore centrale
+                                        changes_buffer[feature_id][comune_idx] = comune_value
+                                        update_count += 1
+                                
+                                # Estrai la sezione censuaria dal gml_id, carattere in posizione 32
+                                if add_sezione and sezione_idx != -1 and gml_id_idx != -1:
+                                    gml_id = feature[gml_id_idx]
+                                    if gml_id and len(gml_id) > 32:
+                                        sez_censuaria = gml_id[31:32]
+                                        changes_buffer[feature_id][sezione_idx] = sez_censuaria
+                                        sezione_count += 1
+                                
+                                # Applica le modifiche quando il buffer raggiunge la dimensione massima o alla fine
+                                if len(changes_buffer) >= buffer_size or i == features_count - 1:
+                                    # Applica tutte le modifiche in batch
+                                    for feat_id, changes in changes_buffer.items():
+                                        for attr_idx, value in changes.items():
+                                            layer.changeAttributeValue(feat_id, attr_idx, value)
+                                    
+                                    # Svuota il buffer
+                                    changes_buffer.clear()
+                                
+                                # Mostra progresso ogni 10000 elementi
+                                if i % 10000 == 0 and i > 0:
+                                    self.log_message.emit(f"Aggiornati {i} elementi su {features_count}...")
+                                    
+                                # Esegui commit parziali per dataset molto grandi
+                                if i % 100000 == 0 and i > 0:
+                                    layer.commitChanges()
+                                    layer.startEditing()
+                                    self.log_message.emit("Commit parziale eseguito")
+                                    
+                            # Commit finale
+                            saved = layer.commitChanges()
+                            if saved:
+                                self.log_message.emit(f"Campo 'comune' aggiornato con successo: {update_count} valori modificati")
+                                if add_sezione:
+                                    self.log_message.emit(f"Campo 'sezione' aggiornato con successo: {sezione_count} valori modificati")
+                            else:
+                                errors = layer.commitErrors()
+                                self.log_message.emit(f"ERRORE durante il salvataggio: {errors}")
+                        else:
+                            self.log_message.emit(f"ERRORE: Campi non trovati - comune={comune_idx}, layer={layer_idx}")
+                    
+                    except Exception as e:
+                        self.log_message.emit(f"ERRORE durante l'aggiornamento del campo: {str(e)}")
+                        import traceback
+                        self.log_message.emit(f"Dettagli: {traceback.format_exc()}")
                 
-                if output_layer.isValid():
-                    # Prepara tutti i campi da aggiungere in una singola operazione
-                    fields_to_add = [
-                        QgsField("foglio", QVariant.String),
-                        QgsField("comune", QVariant.String, len=100),  # Nuovo campo 'comune' lungo 100
-                        QgsField("sigla", QVariant.String, len=2)      # Nuovo campo 'sigla' lungo 2
-                    ]
-                    if file_type == "PLE":
-                        self.log_message.emit("Aggiunta campo 'particella'...")
-                        fields_to_add.append(QgsField("particella", QVariant.String))
-                        # Aggiungi campo sezione censuaria se richiesto
-                        if self.inputs.get("add_sezione_censuaria", False):
-                            self.log_message.emit("Aggiunta campo 'sez_censuaria'...")
-                            fields_to_add.append(QgsField("sez_censuaria", QVariant.String, len=1))
-                    
-                    # Inizia la transazione per le modifiche in batch
-                    output_layer.startEditing()
-                    output_layer.dataProvider().addAttributes(fields_to_add)
-                    output_layer.updateFields()
-                    
-                    # Ottieni gli indici una sola volta fuori dal ciclo
-                    foglio_idx = output_layer.fields().indexFromName("foglio")
-                    particella_idx = output_layer.fields().indexFromName("particella") if file_type == "PLE" else -1
-                    sez_censuaria_idx = output_layer.fields().indexFromName("sez_censuaria") if file_type == "PLE" and self.inputs.get("add_sezione_censuaria", False) else -1
-                    gml_id_idx = output_layer.fields().indexFromName("gml_id")
-                    admin_unit_idx = output_layer.fields().indexFromName("ADMINISTRATIVEUNIT")
-                    comune_idx = output_layer.fields().indexFromName("comune")
-                    sigla_idx = output_layer.fields().indexFromName("sigla")
-                    
-                    # Calcola valori una sola volta
-                    needs_particella = file_type == "PLE" and particella_idx >= 0
-                    needs_sez_censuaria = file_type == "PLE" and sez_censuaria_idx >= 0
-                    
-                    # Inizializza il buffer per le modifiche prima di usarlo
-                    changes_buffer = {}
-                    
-                    # Usa una singola passata per elaborare tutti i dati
-                    self.log_message.emit("Elaborazione dati e compilazione campi...")
-                    feature_count = output_layer.featureCount()
-                    processed = 0
-                    update_frequency = max(1, feature_count // 10)  # Aggiorna il log ogni 10% circa
-                    
-                    for feature in output_layer.getFeatures():
-                        feature_id = feature.id()
-                        gml_id = feature[gml_id_idx]
-                        admin_unit = feature[admin_unit_idx]
-                        
-                        # Incrementa il contatore e aggiorna il log periodicamente
-                        processed += 1
-                        if processed % update_frequency == 0:
-                            self.log_message.emit(f"Elaborazione feature: {processed}/{feature_count} ({int(100 * processed/feature_count)}%)")
-                            if self.isCanceled():
-                                output_layer.rollBack()
-                                self.log_message.emit("Operazione annullata dall'utente")
-                                return None
-                        
-                        changes_buffer[feature_id] = {}
-                        
-                        # Estrai foglio (posizioni 32-36) con controllo più efficiente
-                        if len(gml_id) > 36:
-                            foglio = gml_id[32:36]
-                            changes_buffer[feature_id][foglio_idx] = foglio
-                            
-                            # Estrai particella per PLE (dalla posizione 39 in poi)
-                            if needs_particella and len(gml_id) > 39:
-                                particella = gml_id[39:]
-                                changes_buffer[feature_id][particella_idx] = particella
-                            
-                            # Estrai sezione censuaria per PLE (carattere in posizione 32)
-                            if needs_sez_censuaria and len(gml_id) > 32:
-                                sez_censuaria = gml_id[31:32]
-                                changes_buffer[feature_id][sez_censuaria_idx] = sez_censuaria
-                        
-                        # Aggiungi informazioni del comune usando il codice catastale presente in ADMINISTRATIVEUNIT
-                        if admin_unit and admin_unit.strip():
-                            # Il codice ha 4 caratteri, alcuni potrebbero avere spazi iniziali
-                            codice_catastale = admin_unit.strip()
-                            comune_info = cerca_comune_per_codice_catastale(codice_catastale)
-                            
-                            if comune_info:
-                                # Aggiorna il valore del comune e sigla provincia
-                                changes_buffer[feature_id][comune_idx] = comune_info['denominazione']
-                                changes_buffer[feature_id][sigla_idx] = comune_info['sigla_provincia']
-                    
-                    # Applica tutte le modifiche in batch
-                    batch_size = 5000  # Dimensione del batch per evitare operazioni troppo grandi
-                    batch_count = 0
-                    self.log_message.emit("Applicazione modifiche al layer...")
-                    
-                    for feature_id, attrs in changes_buffer.items():
-                        for field_idx, value in attrs.items():
-                            output_layer.changeAttributeValue(feature_id, field_idx, value)
-                        
-                        batch_count += 1
-                        if batch_count % batch_size == 0 and self.isCanceled():
-                            output_layer.rollBack()
-                            self.log_message.emit("Operazione annullata dall'utente")
-                            return None
-                    
-                    # Finalizza le modifiche e controlla errori
-                    success = output_layer.commitChanges()
-                    if success:
-                        self.log_message.emit(f"Campi calcolati correttamente per il layer {file_type}")
-                        self.log_message.emit(f"Aggiunte informazioni sui comuni ({output_layer.featureCount()} features elaborate)")
-                    else:
-                        self.log_message.emit(f"ERRORE: Impossibile aggiornare i campi per il layer {file_type}")
-                        self.log_message.emit(str(output_layer.commitErrors()))
-                else:
-                    self.log_message.emit(f"ERRORE: Il layer di output {file_type} non è valido")
-
                 # Pulizia risorse temporanee in modo più robusto
                 try:
                     # Prima rilascia i riferimenti QGIS al file

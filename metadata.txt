@@ -23,7 +23,7 @@ hasProcessingProvider=no
 # changelog= v 0.1 Scarica set particelle e mappe catastali per regione e in vari formati
 # changelog= v 0.2 Scarica set particelle e mappe catastali per regione e in vari formati e estrae sezioni censuarie
 # changelog= v 0.3 Scarica set particelle e mappe catastali per regione e in vari formati e permette riproiezione
-# changelog= v 0.4 Scarica set particelle e mappe catastali per regione e in vari formati, permette riproiezione e aggiunge nomi comune e sigla province
+# changelog= v 0.4 Scarica set particelle e mappe catastali per regione e in vari formati, permette riproiezione e estrae i nomi comune
 
 # Tags are comma separated with spaces allowed
 tags=catasto, particelle, fogli, regione, italia
