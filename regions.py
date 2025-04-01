@@ -117,3 +117,123 @@ def get_province_code(province_name):
         if name.lower() == province_name.lower():
             return code
     return None
+
+import duckdb
+import os
+
+def get_municipalities_by_province(province_code):
+    """
+    Restituisce tutti i comuni appartenenti a una provincia
+    utilizzando il file index.parquet.
+    
+    Args:
+        province_code (str): Sigla della provincia (es. "TO", "MI")
+        
+    Returns:
+        list: Lista di dizionari con le informazioni dei comuni 
+              [{"comune": "A016 (ACCEGLIO)", "CODISTAT": "004001", "DENOMINAZIONE_IT": "ACCEGLIO"}, ...]
+    """
+    # Normalizza il codice provincia
+    province_code = province_code.upper()
+    
+    # Mappa delle sigle provincia ai codici ISTAT provincia (primi 3 caratteri del CODISTAT)
+    province_code_map = {
+        # Piemonte
+        "TO": "001", "VC": "002", "NO": "003", "CN": "004", "AT": "005", 
+        "AL": "006", "BI": "096", "VB": "103",
+        # Valle d'Aosta
+        "AO": "007",
+        # Lombardia
+        "VA": "012", "CO": "013", "SO": "014", "MI": "015", "BG": "016", 
+        "BS": "017", "PV": "018", "CR": "019", "MN": "020", "LC": "097", 
+        "LO": "098", "MB": "108",
+        # Trentino-Alto Adige
+        "BZ": "021", "TN": "022",
+        # Veneto
+        "VR": "023", "VI": "024", "BL": "025", "TV": "026", "VE": "027", 
+        "PD": "028", "RO": "029",
+        # Friuli-Venezia Giulia
+        "UD": "030", "GO": "031", "TS": "032", "PN": "093",
+        # Liguria
+        "IM": "008", "SV": "009", "GE": "010", "SP": "011",
+        # Emilia-Romagna
+        "PC": "033", "PR": "034", "RE": "035", "MO": "036", "BO": "037", 
+        "FE": "038", "RA": "039", "FC": "040", "RN": "099",
+        # Toscana
+        "MS": "045", "LU": "046", "PT": "047", "FI": "048", "LI": "049", 
+        "PI": "050", "AR": "051", "SI": "052", "GR": "053", "PO": "100",
+        # Umbria
+        "PG": "054", "TR": "055",
+        # Marche
+        "PU": "041", "AN": "042", "MC": "043", "AP": "044", "FM": "109",
+        # Lazio
+        "VT": "056", "RI": "057", "RM": "058", "LT": "059", "FR": "060",
+        # Abruzzo
+        "AQ": "066", "TE": "067", "PE": "068", "CH": "069",
+        # Molise
+        "IS": "094", "CB": "070",
+        # Campania
+        "CE": "061", "BN": "062", "NA": "063", "AV": "064", "SA": "065",
+        # Puglia
+        "FG": "071", "BA": "072", "TA": "073", "BR": "074", "LE": "075", 
+        "BT": "110",
+        # Basilicata
+        "PZ": "076", "MT": "077",
+        # Calabria
+        "CS": "078", "CZ": "079", "RC": "080", "KR": "101", "VV": "102",
+        # Sicilia
+        "TP": "081", "PA": "082", "ME": "083", "AG": "084", "CL": "085", 
+        "EN": "086", "CT": "087", "RG": "088", "SR": "089",
+        # Sardegna
+        "SS": "090", "NU": "091", "CA": "092", "OR": "095", "SU": "111"
+    }
+    
+    # Ottieni il codice ISTAT della provincia
+    istat_code = province_code_map.get(province_code)
+    if not istat_code:
+        return []
+    
+    # Percorso al file index.parquet
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    parquet_path = os.path.join(base_dir, "index.parquet")
+    
+    # Verifica che il file esista
+    if not os.path.exists(parquet_path):
+        return []
+    
+    try:
+        # Crea una connessione DuckDB in memoria
+        con = duckdb.connect(database=':memory:')
+        
+        # Leggi il file parquet direttamente nella query per evitare problemi di registrazione
+        query = f"""
+        SELECT *
+        FROM read_parquet('{parquet_path}')
+        WHERE CODISTAT LIKE '{istat_code}%'
+        ORDER BY DENOMINAZIONE_IT
+        """
+        
+        # Esegui la query
+        result = con.execute(query).fetchall()
+        
+        # Converti il risultato in lista di dizionari
+        municipalities = []
+        for row in result:
+            # Usando gli indici corretti in base al feedback
+            # comune: indice 0, CODISTAT: indice 2, DENOMINAZIONE_IT: indice 3
+            municipalities.append({
+                "comune": f"{row[0]}_{row[3]}",  # Manteniamo questo formato per la visualizzazione
+                "codice_catasto": row[0],         # Aggiungiamo il solo codice catasto per la ricerca file
+                "CODISTAT": row[2],
+                "DENOMINAZIONE_IT": row[3]
+            })
+        
+        return municipalities
+        
+    except Exception as e:
+        # In caso di errore, ritorna una lista vuota
+        return []
+    
+    finally:
+        if 'con' in locals():
+            con.close()

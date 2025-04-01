@@ -117,6 +117,12 @@
          <property name="maxVisibleItems">
           <number>3</number>
          </property>
+         <property name="editable">
+          <bool>true</bool>
+         </property>
+         <property name="maxVisibleItems">
+          <number>15</number>
+         </property>
          <item>
           <property name="text">
            <string>Entrambi</string>
@@ -488,6 +494,23 @@
        </property>
       </widget>
      </item>
+     <item row="3" column="1">
+      <widget class="QgsCheckableComboBox" name="mComboBox">
+       <property name="toolTip">
+        <string>Seleziona uno o più comuni (inizia a digitare per filtrare)</string>
+       </property>
+       <property name="placeholderText">
+        <string>Digita per cercare comuni...</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_comuni">
+       <property name="text">
+        <string>Seleziona comuni:</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>
@@ -560,6 +583,11 @@ p, li { white-space: pre-wrap; }
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>QgsCheckableComboBox</class>
+   <extends>QComboBox</extends>
+   <header>qgscheckablecombobox.h</header>
+  </customwidget>
   <customwidget>
    <class>QgsFileWidget</class>
    <extends>QWidget</extends>

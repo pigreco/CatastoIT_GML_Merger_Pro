@@ -17,7 +17,7 @@
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
+ *   any later version.                                   *
  *                                                                         *
  ***************************************************************************/
 """
@@ -47,6 +47,7 @@ from .resources import *
 # Import the code for the dialog
 from .catasto_gml_merger_dialog import catasto_gml_mergerDialog
 from .join_anpr import JoinANPR  # Importa la nuova classe
+from .regions import get_municipalities_by_province  # Aggiungi questa importazione tra gli import locali
 
 directory_temporanea = ""                
 
@@ -240,10 +241,31 @@ class catasto_gml_merger:
             return None
         print(inputs['url'])
         
+        # Controlla se è selezionato un comune specifico
+        selected_municipality = None
+        if self.dlg.mComboBox.currentIndex() > 0:  # Indice 0 è "-- Seleziona un comune --"
+            selected_index = self.dlg.mComboBox.currentIndex()
+            selected_data = self.dlg.mComboBox.itemData(selected_index)
+            
+            # Verifica se selected_data è un dizionario o una stringa
+            if isinstance(selected_data, dict):
+                selected_municipality = selected_data['comune']  # Usa il campo 'comune' dal dizionario
+                selected_code = selected_data['codice_catasto']  # Prendi il codice catastale per la ricerca file
+            else:
+                # Retrocompatibilità con la vecchia struttura
+                selected_municipality = selected_data  # Usa direttamente il valore come nome comune
+                selected_code = selected_municipality.split('_')[0] if '_' in selected_municipality else selected_municipality
+            
+            inputs['selected_municipality'] = selected_municipality
+            inputs['selected_code'] = selected_code  # Aggiungi il codice catastale agli input
+            self.log_message(f"Comune selezionato: {selected_municipality}")
+            self.log_message(f"Codice catastale per ricerca file: {selected_code}")
+            print(f"Comune selezionato: {selected_municipality}")
+        
         # Ottieni le province selezionate dalla list_provinces
         selected_items = self.dlg.list_provinces.selectedItems()
-        if not selected_items:
-            self.log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nessuna provincia selezionata</span>")
+        if not selected_items and not selected_municipality:
+            self.log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nessuna provincia o comune selezionato</span>")
             return None
         
         # Crea una lista di codici provincia dalle selezioni
@@ -251,8 +273,11 @@ class catasto_gml_merger:
         inputs['province_code'] = ','.join(province_codes)
         inputs['filter_by_province'] = True
         
-        self.log_message(f"Province selezionate: {inputs['province_code']}")
-        print(f"Province selezionate: {inputs['province_code']}")
+        if selected_municipality:
+            self.log_message(f"Elaborazione limitata al comune: {selected_municipality}")
+        else:
+            self.log_message(f"Province selezionate: {inputs['province_code']}")
+            print(f"Province selezionate: {inputs['province_code']}")
         
         formats = {
             'GPKG': '.gpkg'
@@ -274,6 +299,14 @@ class catasto_gml_merger:
             if not map_filename.endswith(formats[format_name]):
                 map_filename += formats[format_name]
             
+            # Aggiungi il nome del comune se specificato
+            if selected_municipality:
+                map_basename = os.path.splitext(map_filename)[0]
+                map_ext = os.path.splitext(map_filename)[1]
+                # Converti il nome del comune in un formato valido per il nome file
+                safe_name = selected_municipality.replace(" ", "_").replace(",", "").replace("'", "")
+                map_filename = f"{map_basename}_{safe_name}{map_ext}"
+            
             # Componi il percorso completo usando la cartella principale
             map_output = os.path.join(inputs['main_folder'], map_filename)
             inputs['map_output'] = map_output
@@ -289,6 +322,14 @@ class catasto_gml_merger:
             # Aggiungi estensione se mancante
             if not ple_filename.endswith(formats[format_name]):
                 ple_filename += formats[format_name]
+            
+            # Aggiungi il nome del comune se specificato
+            if selected_municipality:
+                ple_basename = os.path.splitext(ple_filename)[0]
+                ple_ext = os.path.splitext(ple_filename)[1]
+                # Converti il nome del comune in un formato valido per il nome file
+                safe_name = selected_municipality.replace(" ", "_").replace(",", "").replace("'", "")
+                ple_filename = f"{ple_basename}_{safe_name}{ple_ext}"
             
             # Componi il percorso completo usando la cartella principale
             ple_output = os.path.join(inputs['main_folder'], ple_filename)
@@ -395,6 +436,7 @@ class catasto_gml_merger:
         self.dlg.cb_format.setCurrentIndex(0)
         self.dlg.cb_region.setCurrentIndex(0)
         self.dlg.list_provinces.clearSelection()  # Cancella le selezioni dalla lista
+        self.dlg.mComboBox.clear()  # Aggiungi questa riga per pulire la combobox dei comuni
         self.dlg.cb_region.setEnabled(True)
         self.dlg.le_url.setEnabled(True)
         self.dlg.le_url.clear()
@@ -442,6 +484,9 @@ class catasto_gml_merger:
             self.dlg.btn_process.clicked.connect(self.process_gml_files)
             self.dlg.btn_close.clicked.connect(self.pulisci_temporanea)
             self.dlg.btn_stop.clicked.connect(self.stop_processing)
+            
+            # Aggiungi questa riga per collegare la selezione della provincia al caricamento dei comuni
+            self.dlg.list_provinces.itemSelectionChanged.connect(self.update_municipalities_combobox)
         
         self.dlg.show()
         
@@ -530,6 +575,91 @@ class catasto_gml_merger:
         # Ripristina lo stato dell'interfaccia
         self.reset_processing_state()
 
+    def update_municipalities_combobox(self):
+        """Aggiorna la combobox dei comuni in base alla provincia selezionata"""
+        try:
+            # Ottieni gli elementi selezionati dalla lista province
+            selected_items = self.dlg.list_provinces.selectedItems()
+            
+            # Svuota la combobox corrente
+            self.dlg.mComboBox.clear()
+            
+            if not selected_items:
+                # Nessuna provincia selezionata, lascia la combobox vuota
+                return
+            
+            # Se è selezionata più di una provincia, mostra un messaggio e lascia la combobox vuota
+            if len(selected_items) > 1:
+                self.dlg.mComboBox.addItem("Seleziona una sola provincia per filtrare i comuni")
+                return
+            
+            # Prendi il codice della provincia selezionata
+            province_code = selected_items[0].text().strip().upper()
+            self.log_message(f"Caricamento comuni per la provincia: {province_code}")
+            
+            # Controlla che il modulo regions sia importato correttamente
+            try:
+                # Reimporta il modulo per essere sicuri di avere l'ultima versione
+                import importlib
+                from . import regions
+                importlib.reload(regions)
+                from .regions import get_municipalities_by_province
+                
+                self.log_message(f"Modulo regions caricato correttamente: {regions.__file__}")
+            except Exception as e:
+                self.log_message(f"Errore nel caricamento del modulo regions: {str(e)}")
+            
+            # Ottieni l'elenco dei comuni per la provincia selezionata
+            municipalities = get_municipalities_by_province(province_code)
+            
+            # Debug - mostra il tipo di dato restituito
+            self.log_message(f"Tipo di dato ricevuto: {type(municipalities)}")
+            if isinstance(municipalities, list) and municipalities:
+                self.log_message(f"Numero comuni trovati: {len(municipalities)}")
+                self.log_message(f"Primo elemento: {type(municipalities[0])}")
+                self.log_message(f"Contenuto primo elemento: {municipalities[0]}")
+            elif municipalities is None:
+                self.log_message("ERRORE: La funzione ha restituito None invece di una lista")
+                return
+            elif isinstance(municipalities, list) and not municipalities:
+                self.log_message(f"AVVISO: La lista dei comuni è vuota per la provincia {province_code}")
+            
+            # Aggiungi un primo elemento generico
+            self.dlg.mComboBox.addItem("-- Seleziona un comune --")
+            
+            if municipalities and isinstance(municipalities, list):
+                # Aggiungi tutti i comuni alla lista
+                for municipality in municipalities:
+                    if isinstance(municipality, dict) and 'comune' in municipality:
+                        # Usa il formato visuale per la visualizzazione nella combobox
+                        display_text = municipality['comune']
+                        # Memorizza l'intero dizionario come data
+                        self.dlg.mComboBox.addItem(display_text, municipality)
+                    else:
+                        # Retrocompatibilità, se è una stringa semplice
+                        self.dlg.mComboBox.addItem(str(municipality), str(municipality))
+                self.log_message(f"Caricati {len(municipalities)} comuni per la provincia {province_code}")
+            else:
+                self.dlg.mComboBox.addItem("Nessun comune trovato per questa provincia")
+                self.log_message(f"Nessun comune trovato per la provincia {province_code}")
+                
+                # Verifica la struttura del file regions.py
+                import os
+                import inspect
+                plugin_dir = os.path.dirname(__file__)
+                regions_path = os.path.join(plugin_dir, 'regions.py')
+                self.log_message(f"Verifica file regions.py: {os.path.exists(regions_path)}")
+                
+                # Controlla se la funzione esiste e prendi il suo codice
+                from .regions import get_municipalities_by_province
+                func_code = inspect.getsource(get_municipalities_by_province)
+                self.log_message(f"Definizione della funzione get_municipalities_by_province:\n{func_code[:200]}...")
+        
+        except Exception as e:
+            self.log_message(f"Errore nell'aggiornamento dei comuni: {str(e)}")
+            import traceback
+            self.log_message(f"Dettagli: {traceback.format_exc()}")
+
 class GmlProcessingTask(QgsTask):
     """Task per l'elaborazione dei file GML in background"""
     
@@ -577,20 +707,30 @@ class GmlProcessingTask(QgsTask):
             # Filtra per provincia
             province_codes = [p.strip().upper() for p in self.inputs['province_code'].split(',')]
             self.log_message.emit(f"Province selezionate: {', '.join(province_codes)}")
-            
-            # Modifica il nome dell'output con tutti i codici provincia
-            province_suffix = "_".join(province_codes)
-            if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
-                base_name = os.path.splitext(self.inputs["map_output"])[0]
-                ext = os.path.splitext(self.inputs["map_output"])[1]
-                self.inputs["map_output"] = f"{base_name}_{province_suffix}{ext}"
-                self.log_message.emit(f"Output MAP aggiornato: {self.inputs['map_output']}")
-            
-            if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
-                base_name = os.path.splitext(self.inputs["ple_output"])[0]
-                ext = os.path.splitext(self.inputs["ple_output"])[1]
-                self.inputs["ple_output"] = f"{base_name}_{province_suffix}{ext}"
-                self.log_message.emit(f"Output PLE aggiornato: {self.inputs['ple_output']}")
+
+            # Controlla se è stato selezionato un comune specifico
+            selected_municipality = self.inputs.get('selected_municipality', None)
+            if selected_municipality:
+                self.log_message.emit(f"Modalità filtro per comune specifico: {selected_municipality}")
+
+            # Modifica il nome dell'output con tutti i codici provincia o con il nome del comune
+            if selected_municipality:
+                # Se è selezionato un comune, il nome del file è già stato modificato in collect_inputs
+                self.log_message.emit(f"Output personalizzato per il comune: {selected_municipality}")
+            else:
+                # Altrimenti, usa i codici provincia come prima
+                province_suffix = "_".join(province_codes)
+                if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
+                    base_name = os.path.splitext(self.inputs["map_output"])[0]
+                    ext = os.path.splitext(self.inputs["map_output"])[1]
+                    self.inputs["map_output"] = f"{base_name}_{province_suffix}{ext}"
+                    self.log_message.emit(f"Output MAP aggiornato: {self.inputs['map_output']}")
+                
+                if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
+                    base_name = os.path.splitext(self.inputs["ple_output"])[0]
+                    ext = os.path.splitext(self.inputs["ple_output"])[1]
+                    self.inputs["ple_output"] = f"{base_name}_{province_suffix}{ext}"
+                    self.log_message.emit(f"Output PLE aggiornato: {self.inputs['ple_output']}")
 
             # Contatori per i file
             ple_count = map_count = 0
@@ -644,6 +784,29 @@ class GmlProcessingTask(QgsTask):
                         
                         with ZipFile(prov_zip_data) as prov_zip:
                             comuni_zips = [f for f in prov_zip.namelist() if f.endswith('.zip')]
+                            
+                            # Se è stato selezionato un comune specifico, filtra i file ZIP dei comuni
+                            if selected_municipality:
+                                # Usa codice_catasto invece di selected_municipality per il filtro
+                                selected_code = self.inputs.get('selected_code', '')
+                                self.log_message.emit(f"Ricerca file per codice catastale: {selected_code}")
+                                
+                                # Filtra i file ZIP dei comuni usando il codice catastale
+                                filtered_comuni = []
+                                for com_zip in comuni_zips:
+                                    # Estrai il nome del comune dal percorso del file ZIP
+                                    com_name = os.path.basename(com_zip).lower()
+                                    # Verifica se il codice catastale è nel nome del file
+                                    if selected_code.lower() in com_name.lower():
+                                        filtered_comuni.append(com_zip)
+                                        self.log_message.emit(f"Trovata corrispondenza per il codice: {com_zip}")
+                                
+                                if not filtered_comuni:
+                                    self.log_message.emit(f"AVVISO: Nessun file trovato per il codice '{selected_code}' nella provincia {prov_name}")
+                                    continue
+                                
+                                comuni_zips = filtered_comuni
+                                self.log_message.emit(f"Filtro applicato: {len(comuni_zips)} file trovati per codice '{selected_code}'")
                             
                             # Calcola il totale dei comuni per la barra di progresso
                             total_comuni = len(comuni_zips)
