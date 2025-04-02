@@ -46,7 +46,6 @@ import processing
 from .resources import *
 # Import the code for the dialog
 from .catasto_gml_merger_dialog import catasto_gml_mergerDialog
-from .join_anpr import JoinANPR  # Importa la nuova classe
 from .regions import get_municipalities_by_province  # Aggiungi questa importazione tra gli import locali
 
 directory_temporanea = ""                
