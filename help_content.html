@@ -18,13 +18,14 @@ p, li { white-space: pre-wrap; }
 <h2 style="margin-top:16px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style="font-size:x-large; font-weight:600; color:#3d8640;">Flusso di lavoro:</span><span style="font-size:x-large; font-weight:600;"> </span></h2>
 <ol style="margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;"><li style="" style="margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Scegli la Regione </li>
 <li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Seleziona una o più province </li>
+<li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Opzionalmente scarica solo per comune </li>
 <li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Seleziona Tipo di File (MAP/PLE) </li>
-<li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Aggiungi calcolo Sez. Censuaria alle PLE </li>
+<li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Estrae Sez. Censuaria alle PLE </li>
 <li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Definisci la cartella di destinazione </li>
 <li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Definisci i nomi dei file di output </li>
 <li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Riproietta </li>
 <li style="" style="margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Premi &quot;Elabora&quot; </li></ol>
-<p style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; background-color:#e8f5e9;"><span style="font-weight:600;">Suggerimento:</span> Per selezionare più province, usa CTRL+clic. </p>
+<p style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; background-color:#e8f5e9;"><span style="font-weight:600;">Suggerimento:</span> Per selezionare più province, usa CTRL+clic. Per scaricare singolo Comune selezionalo </p>
 
 <p style="margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; background-color:#e0f2f1;"><span style="font-weight:600;">OSSERVAZIONE:</span> Il plugin lavora in Background, quindi è possibile continuare a lavorare con <b>QGIS!</b></p>
 <p style="margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; background-color:#fff3e0;">
@@ -35,13 +36,12 @@ p, li { white-space: pre-wrap; }
 <li style="" style="margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style="font-weight:600;">Particelle (PLE)</span>: particelle catastali </li></ul>
 <h2 style="margin-top:16px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style="font-size:x-large; font-weight:600; color:#3d8640;">Funzionalità principali:</span><span style="font-size:x-large; font-weight:600;"> </span></h2>
 <ul style="margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;"><li style="" style="margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Download automatico dei dati catastali </li>
-<li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Estrazione e fusione dei file GML </li>
+<li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Fusione dei file GML per Province o Comune </li>
 <li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Conversione in GeoPackage </li>
-<li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Estrae nome Comune </li>
 <li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Riproiezione </li>
 <li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Caricamento automatico in QGIS </li>
 <li style="" style="margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Pulizia di attributi inutili </li>
-<li style="" style="margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Aggiunta degli attributi foglio e particella </li></ul>
+<li style="" style="margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Aggiunta nome comune </li></ul>
 <p style="margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style="font-size:12px; font-weight:600;">Nota:</span><span style="font-size:12px;"> I dati scaricati saranno salvati nella cartella di destinazione.</span> </p>
 <p style="margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style="font-size:12px; font-weight:600;">EPSG:</span><span style="font-size:12px;"> 6706</span> </p>
 <p style="margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style="font-size:12px; font-weight:600;">Dati:</span><span style="font-size:12px;"> </span><a href="https://geodati.gov.it/geoportale/visualizzazione-metadati/scheda-metadati/?uuid=age:S_0000_ITALIA"><span style="font-size:12px; text-decoration: underline; color:#0000ff;">Agenzia delle Entrate CC BY 4.0</span></a> </p>

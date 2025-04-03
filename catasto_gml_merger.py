@@ -923,7 +923,6 @@ class GmlProcessingTask(QgsTask):
             # Esegui la riproiezione se necessario
             target_crs = self.inputs.get('target_crs', 'EPSG:6706')
             
-            # Rimuovo la condizione che blocca la riproiezione se il target_crs è EPSG:6706
             if not self.isCanceled():
                 self.log_message.emit(f"\n<span style='color:blue;font-weight:bold;'>Riproiezione dei file al sistema {target_crs}...</span>")
                 
@@ -931,19 +930,43 @@ class GmlProcessingTask(QgsTask):
                 if original_map_output and os.path.exists(original_map_output):
                     reproject_start = datetime.now()
                     reprojected_map = self.reproject_layer(original_map_output, target_crs, "MAP")
-                    if reprojected_map:
+                    if reprojected_map and os.path.exists(reprojected_map):
+                        # Rimuovi il file originale dopo la riproiezione riuscita
+                        try:
+                            os.remove(original_map_output)
+                            self.log_message.emit(f"<span style='color:green;'>File originale MAP rimosso dopo riproiezione</span>")
+                        except Exception as e:
+                            self.log_message.emit(f"<span style='color:orange;'>Impossibile rimuovere il file originale MAP: {str(e)}</span>")
+                        
                         self.inputs["map_output"] = reprojected_map
                         reproject_time = datetime.now() - reproject_start
                         self.processing_times["Riproiezione MAP"] = reproject_time
+                        self.log_message.emit(f"<span style='color:green;'>Riproiezione MAP completata: {os.path.basename(reprojected_map)}</span>")
+                    else:
+                        self.log_message.emit("<span style='color:red;font-weight:bold;'>ATTENZIONE: Riproiezione MAP non riuscita, verrà usato il file originale</span>")
+                else:
+                    self.log_message.emit("Nessun file MAP da riproiettare")
                 
-                # Riproietta PLE se esiste
+                # Riproietta PLE se esiste (stesso approccio)
                 if original_ple_output and os.path.exists(original_ple_output):
                     reproject_start = datetime.now()
                     reprojected_ple = self.reproject_layer(original_ple_output, target_crs, "PLE")
-                    if reprojected_ple:
+                    if reprojected_ple and os.path.exists(reprojected_ple):
+                        # Rimuovi il file originale dopo la riproiezione riuscita
+                        try:
+                            os.remove(original_ple_output)
+                            self.log_message.emit(f"<span style='color:green;'>File originale PLE rimosso dopo riproiezione</span>")
+                        except Exception as e:
+                            self.log_message.emit(f"<span style='color:orange;'>Impossibile rimuovere il file originale PLE: {str(e)}</span>")
+                        
                         self.inputs["ple_output"] = reprojected_ple
                         reproject_time = datetime.now() - reproject_start
                         self.processing_times["Riproiezione PLE"] = reproject_time
+                        self.log_message.emit(f"<span style='color:green;'>Riproiezione PLE completata: {os.path.basename(reprojected_ple)}</span>")
+                    else:
+                        self.log_message.emit("<span style='color:red;font-weight:bold;'>ATTENZIONE: Riproiezione PLE non riuscita, verrà usato il file originale</span>")
+                else:
+                    self.log_message.emit("Nessun file PLE da riproiettare")
 
             self.log_message.emit("\nElaborazione completata!")
             self.setProgress(100)  # 100% a elaborazione completata
@@ -1237,27 +1260,61 @@ class GmlProcessingTask(QgsTask):
         self.task_completed.emit(result, self.result)
 
     def reproject_layer(self, input_file, target_crs, file_type):
-        """Riproietta un layer vettoriale nel CRS specificato"""
+        """Riproietta un layer vettoriale nel CRS specificato, garantendo sempre l'assegnazione corretta"""
         try:
-            self.log_message.emit(f"Riproiezione del layer {file_type} nel sistema {target_crs}...")
+            from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsProject
+            
+            # Verifica se il file è valido
+            if not input_file or not os.path.exists(input_file):
+                self.log_message.emit(f"ERRORE: File {file_type} non trovato: {input_file}")
+                return None
+                
+            # Normalizza il formato del CRS target (EPSG:6706)
+            if not target_crs.startswith("EPSG:"):
+                if target_crs.isdigit():
+                    target_crs = f"EPSG:{target_crs}"
+                else:
+                    self.log_message.emit(f"ERRORE: Formato CRS non valido: {target_crs}")
+                    return None
+                
+            # Crea oggetto CRS target
+            target_crs_obj = QgsCoordinateReferenceSystem(target_crs)
+            if not target_crs_obj.isValid():
+                self.log_message.emit(f"ERRORE: CRS target non valido: {target_crs}")
+                return None
+                
+            self.log_message.emit(f"Riproiezione del layer {file_type} nel sistema {target_crs_obj.description()}")
             
             # Crea il nome del file di output con il suffisso del CRS
             basename = os.path.splitext(input_file)[0]
             extension = os.path.splitext(input_file)[1]
-            crs_suffix = target_crs.replace(":", "_")  # Trasforma "EPSG:4326" in "EPSG_4326"
+            crs_suffix = target_crs.replace(":", "_")  # Trasforma "EPSG:6706" in "EPSG_6706"
             output_file = f"{basename}_{crs_suffix}{extension}"
             
-            # Se il file esiste già, rimuovilo
+            # Gestione file esistente
             if os.path.exists(output_file):
                 try:
                     os.remove(output_file)
-                    self.log_message.emit(f"File riproiettato esistente rimosso: {os.path.basename(output_file)}")
+                    self.log_message.emit(f"File riproiettato esistente rimosso")
                 except Exception as e:
-                    self.log_message.emit(f"ATTENZIONE: Impossibile rimuovere il file riproiettato esistente: {str(e)}")
-                    # Usa un timestamp per evitare conflitti
+                    self.log_message.emit(f"Impossibile rimuovere il file esistente: {str(e)}")
                     output_file = f"{basename}_{crs_suffix}_{int(time.time())}{extension}"
+                    self.log_message.emit(f"Utilizzo nome alternativo: {os.path.basename(output_file)}")
             
-            # Parametri per la riproiezione
+            # Chiudi riferimenti ai layer
+            for layer_id, layer in list(QgsProject.instance().mapLayers().items()):
+                if input_file in layer.source() or output_file in layer.source():
+                    QgsProject.instance().removeMapLayer(layer_id)
+                    self.log_message.emit(f"Chiuso layer di riferimento per evitare conflitti")
+            
+            # Pulizia memoria
+            gc.collect()
+            time.sleep(0.5)
+            
+            # Riproiezione utilizzando l'algoritmo 'qgis:reprojectlayer' che è quello utilizzato dalla GUI di QGIS
+            self.log_message.emit(f"Riproiezione in corso con algoritmo QGIS nativo...")
+            
+            # Configura i parametri di processing
             params = {
                 'INPUT': input_file,
                 'TARGET_CRS': target_crs,
@@ -1265,14 +1322,69 @@ class GmlProcessingTask(QgsTask):
             }
             
             # Esegui la riproiezione
-            result = processing.run("native:reprojectlayer", params)
-            output_file = result['OUTPUT']
+            try:
+                # Prima tenta l'algoritmo qgis:reprojectlayer - usato dall'interfaccia grafica di QGIS
+                result = processing.run("qgis:reprojectlayer", params)
+                output_file = result['OUTPUT']
+            except Exception as e:
+                self.log_message.emit(f"Errore con qgis:reprojectlayer: {str(e)}, tentativo con native:reprojectlayer")
+                
+                # Fallback all'algoritmo native se necessario
+                result = processing.run("native:reprojectlayer", params)
+                output_file = result['OUTPUT']
             
-            self.log_message.emit(f"Riproiezione completata: {os.path.basename(output_file)}")
+            # Verifica il risultato
+            if not os.path.exists(output_file):
+                self.log_message.emit(f"ERRORE: Il file di output non esiste dopo la riproiezione")
+                return None
+                
+            # Verifica che l'output sia valido e contenga feature
+            output_layer = QgsVectorLayer(output_file, "temp_output", "ogr")
+            if not output_layer.isValid():
+                self.log_message.emit(f"ERRORE: Layer riproiettato non valido")
+                return None
+                
+            feature_count = output_layer.featureCount()
+            if feature_count == 0:
+                self.log_message.emit(f"ERRORE: Layer riproiettato vuoto")
+                return None
+            
+            # Verifica esplicitamente il CRS risultante e applica forzatamente il CRS corretto se necessario
+            output_crs = output_layer.crs()
+            if not output_crs.isValid() or output_crs.authid() != target_crs:
+                self.log_message.emit(f"AVVISO: Il CRS risultante ({output_crs.authid()}) non corrisponde a quello richiesto ({target_crs})")
+                self.log_message.emit(f"Applicazione forzata del CRS corretto...")
+                
+                # Rilascia il layer
+                output_layer = None
+                gc.collect()
+                
+                # Applica forzatamente il CRS con un secondo passaggio di processing
+                fixed_output = f"{basename}_{crs_suffix}_fixed{extension}"
+                fix_params = {
+                    'INPUT': output_file,
+                    'CRS': target_crs,
+                    'OUTPUT': fixed_output
+                }
+                
+                fix_result = processing.run("native:assignprojection", fix_params)
+                fixed_output = fix_result['OUTPUT']
+                
+                if os.path.exists(fixed_output):
+                    # Rimuovi il file intermedio
+                    try:
+                        os.remove(output_file)
+                    except:
+                        pass
+                    
+                    output_file = fixed_output
+                    self.log_message.emit(f"CRS corretto applicato forzatamente")
+            
+            self.log_message.emit(f"Riproiezione completata con successo: {feature_count} feature")
             return output_file
-        
+                
         except Exception as e:
-            self.log_message.emit(f"ERRORE durante la riproiezione del layer {file_type}: {str(e)}")
+            self.log_message.emit(f"ERRORE durante la riproiezione: {str(e)}")
             import traceback
             self.log_message.emit(f"Dettagli: {traceback.format_exc()}")
             return None
