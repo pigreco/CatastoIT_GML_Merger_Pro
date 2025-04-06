@@ -26,11 +26,11 @@
 
 # noinspection PyPep8Naming
 def classFactory(iface):  # pylint: disable=invalid-name
-    """Load catasto_gml_merger class from file catasto_gml_merger.
+    """Load CatastoIT_GML_Merger_Pro class from file CatastoIT_GML_Merger_Pro.
 
     :param iface: A QGIS interface instance.
     :type iface: QgsInterface
     """
     #
-    from .catasto_gml_merger import catasto_gml_merger
-    return catasto_gml_merger(iface)
+    from .CatastoIT_GML_Merger_Pro import CatastoIT_GML_Merger_Pro
+    return CatastoIT_GML_Merger_Pro(iface)

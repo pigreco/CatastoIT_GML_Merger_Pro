@@ -23,7 +23,9 @@
 """
 
 import os
+import sys
 
+sys.path.append(os.path.dirname(__file__))
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtWidgets import QProgressBar, QPushButton
@@ -35,13 +37,13 @@ from .regions import REGIONS, get_provinces
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'catasto_gml_merger_dialog_base.ui'))
+    os.path.dirname(__file__), 'CatastoIT_GML_Merger_Pro_dialog_base.ui'), resource_suffix='')
 
 
-class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
+class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
     def __init__(self, parent=None):
         """Constructor."""
-        super(catasto_gml_mergerDialog, self).__init__(parent)
+        super(CatastoIT_GML_Merger_ProDialog, self).__init__(parent)
         self.setupUi(self)
         
         # Aggiungi il pulsante di minimizzazione
@@ -166,3 +168,4 @@ class catasto_gml_mergerDialog(QtWidgets.QDialog, FORM_CLASS):
                 self.help_browser.setHtml(help_content)
         else:
             self.help_browser.setHtml("<p>File della guida non trovato.</p>")
+

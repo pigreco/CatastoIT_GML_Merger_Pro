@@ -44,12 +44,12 @@ import processing
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
-from .catasto_gml_merger_dialog import catasto_gml_mergerDialog
+from .CatastoIT_GML_Merger_Pro_dialog import CatastoIT_GML_Merger_ProDialog
 
 directory_temporanea = ""                
 
 
-class catasto_gml_merger:
+class CatastoIT_GML_Merger_Pro:
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
@@ -69,7 +69,7 @@ class catasto_gml_merger:
         locale_path = os.path.join(
             self.plugin_dir,
             'i18n',
-            'catasto_gml_merger_{}.qm'.format(locale))
+            'CatastoIT_GML_Merger_Pro_{}.qm'.format(locale))
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
@@ -78,7 +78,7 @@ class catasto_gml_merger:
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr(u'&Catasto_gml_merger')
+        self.menu = self.tr(u'&CatastoIT_GML_Merger_Pro')
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
@@ -97,7 +97,7 @@ class catasto_gml_merger:
         :rtype: QString
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
-        return QCoreApplication.translate('catasto_gml_merger', message)
+        return QCoreApplication.translate('CatastoIT_GML_Merger_Pro', message)
 
 
     def add_action(
@@ -177,10 +177,10 @@ class catasto_gml_merger:
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        icon_path = ':/plugins/catasto_gml_merger/icon.png'
+        icon_path = ':/plugins/CatastoIT_GML_Merger_Pro/icon.png'
         self.add_action(
             icon_path,
-            text=self.tr(u'catasto_gml_merger'),
+            text=self.tr(u'CatastoIT_GML_Merger_Pro'),
             callback=self.run,
             parent=self.iface.mainWindow())
 
@@ -192,7 +192,7 @@ class catasto_gml_merger:
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
             self.iface.removePluginMenu(
-                self.tr(u'&Catasto_gml_merger'),
+                self.tr(u'&CatastoIT_GML_Merger_Pro'),
                 action)
             self.iface.removeToolBarIcon(action)
 
@@ -202,7 +202,7 @@ class catasto_gml_merger:
 
         if self.first_start == True:
             self.first_start = False
-            self.dlg = catasto_gml_mergerDialog()
+            self.dlg = CatastoIT_GML_Merger_ProDialog()
             
             # Inizializziamo l'attributo per tenere traccia del task attivo
             self.current_task = None
