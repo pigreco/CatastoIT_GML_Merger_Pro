@@ -27,7 +27,7 @@ hasProcessingProvider=no
 # Tags are comma separated with spaces allowed
 tags=catasto, particelle, fogli, regione, italia
 
-homepage=https://geodati.gov.it/geoportale/visualizzazione-metadati/scheda-metadati/?uuid=age:S_0000_ITALIA
+homepage=https://github.com/pigreco/CatastoIT_GML_Merger_Pro/blob/main/README.md
 category=Plugins
 icon=icon.png
 # experimental flag
