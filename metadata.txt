@@ -3,10 +3,11 @@
 # This file should be included when you package your plugin.# Mandatory items:
 
 [general]
+supportsQt6=True
 name=CatastoIT_GML_Merger_Pro
-qgisMinimumVersion=3.22
+qgisMinimumVersion=3.28
 description=CatastoIT_GML_Merger_Pro
-version=0.3
+version=0.4
 author=Salvatore Fiandaca, Giulio Fattori
 email=pigrecoinfinito@gmail.com
 
@@ -23,9 +24,10 @@ hasProcessingProvider=no
 # changelog= v 0.1 Scarica set particelle e mappe catastali per regione e in vari formati
 # changelog= v 0.2 Scarica set particelle e mappe catastali per regione e in vari formati ee estrae sezioni censuarie
 # changelog= v 0.3 Scarica set particelle e mappe catastali per regione e in vari formati e permette riproiezione
+changelog= v 0.4 Aggiornamento per compatibilità con QGIS 3.28+ e Qt6
 
 # Tags are comma separated with spaces allowed
-tags=catasto, particelle, fogli, regione, italia
+tags=catasto, particelle, fogli, regione, italia, qt6
 
 homepage=https://github.com/pigreco/CatastoIT_GML_Merger_Pro/blob/main/README.md
 category=Plugins

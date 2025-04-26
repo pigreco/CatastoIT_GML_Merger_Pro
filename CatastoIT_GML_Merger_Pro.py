@@ -35,10 +35,8 @@ from zipfile import ZipFile
 
 # -- Import moduli di terze parti --
 from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator, QVariant, Qt, pyqtSignal
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QApplication, QListWidget
-from qgis.core import Qgis, QgsField, QgsMessageLog, QgsProject, QgsVectorLayer, QgsTask, QgsApplication
-import processing
+from qgis.PyQt.QtGui import QIcon, QAction 
+from qgis.PyQt.QtWidgets import QApplication, QListWidget
 
 # -- Import moduli locali del progetto --
 # Initialize Qt resources from file resources.py

@@ -18,6 +18,7 @@
 9. **Report statistico**: Generazione automatica di report sui dati elaborati
 10. **Supporto sezione censuaria**: Possibilità di aggiungere automaticamente la sezione censuaria nelle Particelle
 11. **Riproiezione dati**: Possibilità di riproiettare i dati catastali in altri sistemi di riferimento (CRS) oltre al nativo (EPSG:6706)
+12. **Compatibilità Qt6**: Pieno supporto sia per QGIS con Qt5 che per le versioni più recenti con Qt6
 
 ## Come utilizzare il plugin
 
@@ -41,6 +42,7 @@
 - I tempi di elaborazione vengono mostrati al termine del processo
 - Gestione ottimizzata della memoria per file di grandi dimensioni
 - I dati vengono riproiettati dal sistema nativo RDN2008/ETRF2000 (EPSG:7794) al CRS selezionato dall'utente
+- Supporto completo per le librerie Qt6 nelle versioni recenti di QGIS (3.28+)
 
 ## Dati di output
 - Nei file di output vengono eliminati i campi inutili e mantenuti solo `gml_id` e `ADMINISTRATIVEUNIT`
@@ -53,11 +55,17 @@
 - I dati vengono forniti nel sistema di coordinate (CRS) scelto dall'utente durante l'elaborazione
 
 ## Requisiti di sistema
-- QGIS 3.22 o superiore
+- QGIS 3.22 o superiore (QGIS 3.28+ per supporto Qt6)
 - Connessione internet per il download dei dati
 - Almeno 4GB di RAM (8GB consigliati per province estese)
 - Spazio su disco sufficiente per i dati temporanei e di output
 - Python 3.7 o superiore con librerie GDAL/OGR
+
+## Changelog
+- v0.4: Aggiunto supporto per Qt6 e QGIS 3.28+
+- v0.3: Aggiunta riproiezione dei dati
+- v0.2: Aggiunta estrazione sezioni censuarie
+- v0.1: Versione iniziale
 
 ## Disclaimer
 
