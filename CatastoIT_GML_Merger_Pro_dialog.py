@@ -31,13 +31,21 @@ from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtWidgets import QProgressBar, QPushButton, QDialog
 from qgis.PyQt.QtGui import QIcon, QAction  # QAction spostato da QtWidgets a QtGui
 from qgis.PyQt.QtCore import Qt, QSize  # Aggiunto QSize che potrebbe essere utile
+from qgis.PyQt import QtCore  # Aggiunto QtCore da qgis.PyQt
 # from qgis.gui import QgsProjectionSelectionWidget  # Aggiungi questa importazione
 # from qgis.core import QgsCoordinateReferenceSystem  # Aggiungi questa importazione
 from .regions import REGIONS, get_provinces
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'CatastoIT_GML_Merger_Pro_dialog_base.ui'), resource_suffix='')
+try:
+    # Per Qt6
+    FORM_CLASS, _ = uic.loadUiType(os.path.join(
+        os.path.dirname(__file__), 'CatastoIT_GML_Merger_Pro_dialog_base.ui'))
+except TypeError:
+    # Per Qt5
+    FORM_CLASS, _ = uic.loadUiType(os.path.join(
+        os.path.dirname(__file__), 'CatastoIT_GML_Merger_Pro_dialog_base.ui'),
+        resource_suffix='')
 
 
 class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
