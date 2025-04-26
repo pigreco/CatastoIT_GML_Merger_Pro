@@ -25,7 +25,7 @@
 import os
 import sys
 import time
-import datetime
+from datetime import datetime
 import zipfile
 import shutil
 import glob
@@ -769,7 +769,7 @@ class GmlProcessingTask(QgsTask):
                 
                 # Riproietta MAP se esiste
                 if original_map_output and os.path.exists(original_map_output):
-                    reproject_start = datetime.now()
+                    reproject_start = datetime.now()  # Cambia in datetime.datetime.now()
                     reprojected_map = self.reproject_layer(original_map_output, target_crs, "MAP")
                     if reprojected_map:
                         self.inputs["map_output"] = reprojected_map
@@ -778,7 +778,7 @@ class GmlProcessingTask(QgsTask):
                 
                 # Riproietta PLE se esiste
                 if original_ple_output and os.path.exists(original_ple_output):
-                    reproject_start = datetime.now()
+                    reproject_start = datetime.now()  # Cambia in datetime.datetime.now()
                     reprojected_ple = self.reproject_layer(original_ple_output, target_crs, "PLE")
                     if reprojected_ple:
                         self.inputs["ple_output"] = reprojected_ple
@@ -811,7 +811,7 @@ class GmlProcessingTask(QgsTask):
     
     def merge_files(self, source_folder, output_file, file_type):
         """Metodo per unire i file GML e applicare trasformazioni"""
-        start_time = datetime.now()
+        start_time = datetime.now()  # Cambia in datetime.datetime.now()
 
         source_files = [
             os.path.join(source_folder, f)
