@@ -47,7 +47,8 @@ from .CatastoIT_GML_Merger_Pro_dialog import CatastoIT_GML_Merger_ProDialog
 # -- Import moduli QGIS --
 from qgis.core import (
     QgsProject,
-    QgsTask,  # Aggiungi questa riga
+    QgsTask, 
+    QgsMessageLog,  # Aggiungi questa riga
     QgsCoordinateReferenceSystem
 )
 
