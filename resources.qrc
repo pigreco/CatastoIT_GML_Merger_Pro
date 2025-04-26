@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/CatastoIT_GML_Merger_Pro" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>
