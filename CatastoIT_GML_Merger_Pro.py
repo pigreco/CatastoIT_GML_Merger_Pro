@@ -44,6 +44,13 @@ from .resources import *
 # Import the code for the dialog
 from .CatastoIT_GML_Merger_Pro_dialog import CatastoIT_GML_Merger_ProDialog
 
+# -- Import moduli QGIS --
+from qgis.core import (
+    QgsProject,
+    QgsTask,  # Aggiungi questa riga
+    QgsCoordinateReferenceSystem
+)
+
 directory_temporanea = ""                
 
 
@@ -207,7 +214,6 @@ class CatastoIT_GML_Merger_Pro:
             self.processing_active = False
             
             # Inizializza il widget di proiezione con il CRS predefinito
-            from qgis.core import QgsCoordinateReferenceSystem
             self.dlg.mQgsProjectionSelectionWidget.setCrs(QgsCoordinateReferenceSystem('EPSG:6706'))
             
         self.dlg.show()
