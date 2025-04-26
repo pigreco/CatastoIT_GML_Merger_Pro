@@ -48,8 +48,12 @@ from .CatastoIT_GML_Merger_Pro_dialog import CatastoIT_GML_Merger_ProDialog
 from qgis.core import (
     QgsProject,
     QgsTask, 
-    QgsMessageLog,  # Aggiungi questa riga
-    QgsCoordinateReferenceSystem
+    QgsMessageLog,
+    QgsCoordinateReferenceSystem,
+    QgsApplication,
+    QgsVectorLayer,
+    QgsField,
+    QgsVariant  # Se usi QVariant in qgis.core
 )
 
 directory_temporanea = ""                
