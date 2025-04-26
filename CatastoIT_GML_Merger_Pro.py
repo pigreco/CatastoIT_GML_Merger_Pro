@@ -31,6 +31,10 @@ import shutil
 import glob
 import re
 import tempfile
+import gc  # Aggiungi questa importazione per garbage collection
+import io  # Per BytesIO
+import urllib.request  # Per il download
+from zipfile import ZipFile  # Per gestire i file ZIP
 
 # -- Import moduli PyQt --
 from qgis.PyQt import QtGui, QtCore, QtWidgets
@@ -59,6 +63,12 @@ from qgis.core import (
     QgsVectorLayer,
     QgsField
 )
+
+# Import processing per la riproiezione e altre operazioni
+import processing
+
+# Importa la classe di dialogo
+from .CatastoIT_GML_Merger_Pro_dialog import CatastoIT_GML_Merger_ProDialog
 
 directory_temporanea = ""                
 
