@@ -28,24 +28,16 @@ import sys
 sys.path.append(os.path.dirname(__file__))
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
-from qgis.PyQt.QtWidgets import QProgressBar, QPushButton, QDialog
-from qgis.PyQt.QtGui import QIcon, QAction  # QAction spostato da QtWidgets a QtGui
-from qgis.PyQt.QtCore import Qt, QSize  # Aggiunto QSize che potrebbe essere utile
-from qgis.PyQt import QtCore  # Aggiunto QtCore da qgis.PyQt
+from qgis.PyQt.QtWidgets import QProgressBar, QPushButton
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtCore import Qt
 # from qgis.gui import QgsProjectionSelectionWidget  # Aggiungi questa importazione
 # from qgis.core import QgsCoordinateReferenceSystem  # Aggiungi questa importazione
 from .regions import REGIONS, get_provinces
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
-try:
-    # Per Qt6
-    FORM_CLASS, _ = uic.loadUiType(os.path.join(
-        os.path.dirname(__file__), 'CatastoIT_GML_Merger_Pro_dialog_base.ui'))
-except TypeError:
-    # Per Qt5
-    FORM_CLASS, _ = uic.loadUiType(os.path.join(
-        os.path.dirname(__file__), 'CatastoIT_GML_Merger_Pro_dialog_base.ui'),
-        resource_suffix='')
+FORM_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'CatastoIT_GML_Merger_Pro_dialog_base.ui'))
 
 
 class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
@@ -54,8 +46,7 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         super(CatastoIT_GML_Merger_ProDialog, self).__init__(parent)
         self.setupUi(self)
         
-        # Aggiungi il pulsante di minimizzazione - modifica per Qt6
-        # In Qt6, WindowMinimizeButtonHint è ancora valido ma lo stile è cambiato
+        # Aggiungi il pulsante di minimizzazione
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMinimizeButtonHint)
         
         # Aggiungi il widget di selezione CRS
@@ -84,6 +75,10 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         # Popola il combobox delle regioni
         self.populate_regions()
         
+        # Non possiamo più usare setFilter su QLineEdit perché non è un QgsFileWidget
+        # self.le_map_output.setFilter('*.gpkg')
+        # self.le_ple_output.setFilter('*.gpkg')
+        
         def updateFileType():
             ext = self.cb_format.currentText().lower()
             # Non possiamo più usare setFilter o filePath su QLineEdit
@@ -100,7 +95,7 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
                 base_path = self.le_ple_output.text().split('.')[0]
                 self.le_ple_output.setText(f"{base_path}.{ext}")
         
-        # Connetti il segnale alla funzione - in Qt6 funziona ancora questo stile di connessione
+        # Connetti il segnale alla funzione
         self.cb_format.currentTextChanged.connect(updateFileType)
         
         # Connetti il cambio di regione all'aggiornamento delle province
@@ -154,8 +149,6 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         """Gestisce la visualizzazione/nascondimento del pannello della guida."""
         if self.help_browser.isVisible():
             self.help_browser.hide()
-            # In Qt6, i percorsi delle risorse possono essere leggermente diversi
-            # Se le icone non vengono visualizzate, è possibile che sia necessario aggiornare i percorsi
             self.btn_toggle_help.setIcon(QIcon(":/qt-project.org/styles/commonstyle/images/right-32.png"))
             self.btn_toggle_help.setToolTip("Mostra guida")
         else:
@@ -175,11 +168,4 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
                 self.help_browser.setHtml(help_content)
         else:
             self.help_browser.setHtml("<p>File della guida non trovato.</p>")
-
-    def cancel_operation(self):
-        """Implementazione di fallback per il metodo cancel_operation."""
-        # Questo metodo dovrebbe essere implementato nella classe principale o collegato a un'azione
-        print("Operazione annullata")
-        # Potrebbe essere necessario emettere un segnale o chiamare una funzione esterna
-        # per interrompere effettivamente l'operazione in corso
 
