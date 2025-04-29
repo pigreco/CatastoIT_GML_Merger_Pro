@@ -8,7 +8,7 @@
                              -------------------
         begin                : 2025-02-10
         git sha              : $Format:%H$
-        copyright            : (C) 2025 by Salvatore Fiandaca
+        copyright            : (C) 2025 by pigrecoinfinito@gmail.com
         email                : Salvatore Fiandaca
  ***************************************************************************/
 
@@ -31,8 +31,6 @@ from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtWidgets import QProgressBar, QPushButton
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import Qt
-# from qgis.gui import QgsProjectionSelectionWidget  # Aggiungi questa importazione
-# from qgis.core import QgsCoordinateReferenceSystem  # Aggiungi questa importazione
 from .regions import REGIONS, get_provinces
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
@@ -49,11 +47,6 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         # Aggiungi il pulsante di minimizzazione
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMinimizeButtonHint)
         
-        # Aggiungi il widget di selezione CRS
-        # self.mQgsProjectionSelectionWidget = QgsProjectionSelectionWidget(self)
-        # self.mQgsProjectionSelectionWidget.setCrs(QgsCoordinateReferenceSystem('EPSG:6706'))
-        # Aggiungi il widget al layout appropriato - modifica in base alla tua UI
-        # self.layout().addWidget(self.mQgsProjectionSelectionWidget)
             
         if not hasattr(self, 'btn_cancel'):
             self.btn_cancel = QPushButton("Annulla", self)
