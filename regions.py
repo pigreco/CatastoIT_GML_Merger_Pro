@@ -31,7 +31,7 @@ PROVINCES_BY_REGION = {
     
     "PIEMONTE": ["AL", "AT", "BI", "CN", "NO", "TO", "VB", "VC"],
     
-    "PUGLIA": ["BA", "BT", "BR", "FG", "LE", "TA"],
+    "PUGLIA": ["BA", "BR", "FG", "LE", "TA"],
     
     "SARDEGNA": ["CA", "NU", "OR", "SS"],
     
