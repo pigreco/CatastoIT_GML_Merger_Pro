@@ -458,6 +458,36 @@
        </property>
       </widget>
      </item>
+     <item row="9" column="0">
+      <widget class="QLabel" name="label_temp_folder">
+       <property name="text">
+        <string>Cartella temporanea [Opzionale]:</string>
+       </property>
+       <property name="toolTip">
+        <string>Seleziona una cartella per i file temporanei. Se vuota, viene usata la cartella temporanea di sistema.</string>
+       </property>
+      </widget>
+     </item>
+     <item row="9" column="1">
+      <widget class="QgsFileWidget" name="le_temp_folder">
+       <property name="toolTip">
+        <string>Seleziona una cartella per i file temporanei con spazio sufficiente</string>
+       </property>
+       <property name="defaultRoot">
+        <string/>
+       </property>
+       <property name="storageMode">
+        <enum>QgsFileWidget::GetDirectory</enum>
+       </property>
+       <property name="options">
+        <set>QFileDialog::ShowDirsOnly</set>
+       </property>
+       <property name="fileWidgetButtonIcon" stdset="0">
+        <iconset>
+         <normaloff>:/qt-project.org/styles/commonstyle/images/newdirectory-128.png</normaloff>:/qt-project.org/styles/commonstyle/images/newdirectory-128.png</iconset>
+       </property>
+      </widget>
+     </item>
      <item row="13" column="1">
       <widget class="QgsProjectionSelectionWidget" name="mQgsProjectionSelectionWidget"/>
      </item>

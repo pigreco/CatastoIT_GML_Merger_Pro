@@ -64,6 +64,9 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         # Imposta il placeholder per il widget di selezione cartella
         self.le_folder.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\munnizza")
         
+        # Imposta il placeholder per il widget di selezione cartella temporanea
+        self.le_temp_folder.lineEdit().setPlaceholderText("ES: /media/emanuele/extra/temp (opzionale - usa cartella di sistema se vuoto)")
+        
         # Imposta i placeholder direttamente sui QLineEdit (non più QgsFileWidget)
         self.le_map_output.setPlaceholderText("Solo nome file (es. mappe_catastali)")
         self.le_ple_output.setPlaceholderText("Solo nome file (es. particelle_catastali)")
@@ -106,6 +109,11 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         
         # Aggiorna la lista delle province all'apertura con la regione predefinita
         self.update_provinces()
+
+    def cancel_operation(self):
+        """Cancella l'operazione in corso"""
+        # Questo metodo sarà connesso dal plugin principale se necessario
+        pass
         
     def closeEvent(self, event):
         # dir_path = directory_temporanea
@@ -117,6 +125,7 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
            # log_message("\nError: %s : %s" % (dir_path, e.strerror))
 
         self.le_folder.setFilePath("")
+        self.le_temp_folder.setFilePath("")
         # Usando setText invece di setFilePath per i QLineEdit
         self.le_map_output.setText("")
         self.le_ple_output.setText("")
