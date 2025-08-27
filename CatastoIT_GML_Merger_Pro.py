@@ -230,6 +230,21 @@ class CatastoIT_GML_Merger_Pro:
             inputs['main_folder'] = self.dlg.le_folder.filePath()
             print(inputs['main_folder'])
             
+            # Cartella temporanea opzionale
+            inputs['temp_folder'] = self.dlg.le_temp_folder.filePath()
+            if inputs['temp_folder']:
+                print(f"Cartella temporanea personalizzata: {inputs['temp_folder']}")
+                log_message(f"Usando cartella temporanea personalizzata: {inputs['temp_folder']}")
+                # Verifica che la cartella esista e sia scrivibile
+                if not os.path.exists(inputs['temp_folder']):
+                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: La cartella temporanea specificata non esiste</span>")
+                    return None
+                if not os.access(inputs['temp_folder'], os.W_OK):
+                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: La cartella temporanea specificata non è scrivibile</span>")
+                    return None
+            else:
+                print("Usando cartella temporanea di sistema")
+            
             # Verifica che sia stata selezionata una cartella di lavoro
             if not inputs['main_folder']:
                 log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nessuna cartella di lavoro selezionata</span>")
@@ -359,38 +374,93 @@ class CatastoIT_GML_Merger_Pro:
                 self.reset_processing_state()
 
         def pulisci_temporanea():
+            """Pulisce le directory temporanee in modo sicuro per evitare crash"""
             global directory_temporanea
             dir_path = directory_temporanea
             
-            # Reset della progress bar
-            # self.dlg.progressBar.setValue(0)
-            # self.dlg.progressBar.setVisible(False)
-            
-            if dir_path and os.path.exists(dir_path):
-                # Libera tutti i layer che potrebbero usare file nella directory temporanea
-                for layer_id, layer in list(QgsProject.instance().mapLayers().items()):
-                    if dir_path in layer.source():
-                        QgsProject.instance().removeMapLayer(layer_id)
+            try:
+                # Reset della progress bar
+                # self.dlg.progressBar.setValue(0)
+                # self.dlg.progressBar.setVisible(False)
                 
-                # Forza garbage collection
-                gc.collect()
-                time.sleep(1)
-                
-                try:
-                    for root, dirs, files in os.walk(dir_path, topdown=False):
-                        for file in files:
-                            try:
-                                os.remove(os.path.join(root, file))
-                            except:
-                                log_message(f"Impossibile rimuovere {file}")
+                if dir_path and os.path.exists(dir_path):
+                    log_message("Inizio pulizia directory temporanea...")
                     
-                    shutil.rmtree(dir_path)
-                    log_message(f"Directory {dir_path} rimossa correttamente")
-                except OSError as e:
-                    log_message(f"\nErrore nella pulizia: {str(e)}")
-                    log_message("Alcuni file temporanei verranno rimossi alla chiusura del Plugin")
-            else:
-                log_message("Nessuna directory temporanea da pulire")
+                    # Libera tutti i layer in modo sicuro
+                    try:
+                        project = QgsProject.instance()
+                        layers_to_remove = []
+                        
+                        # Prima raccogli tutti i layer da rimuovere
+                        for layer_id, layer in list(project.mapLayers().items()):
+                            try:
+                                if layer and hasattr(layer, 'source') and layer.source():
+                                    if dir_path in layer.source():
+                                        layers_to_remove.append(layer_id)
+                            except Exception:
+                                # Ignora errori su singoli layer
+                                continue
+                        
+                        # Poi rimuovi i layer uno per uno
+                        for layer_id in layers_to_remove:
+                            try:
+                                project.removeMapLayer(layer_id)
+                            except Exception:
+                                continue
+                                
+                        if layers_to_remove:
+                            log_message(f"Rimossi {len(layers_to_remove)} layer temporanei")
+                            
+                    except Exception as e:
+                        log_message(f"Avviso durante rimozione layer: {str(e)}")
+                    
+                    # Forza garbage collection in modo più sicuro
+                    try:
+                        gc.collect()
+                        time.sleep(0.5)  # Ridotto il tempo di attesa
+                    except Exception:
+                        pass
+                    
+                    # Prova a rimuovere la directory
+                    try:
+                        shutil.rmtree(dir_path)
+                        log_message(f"Directory {dir_path} rimossa correttamente")
+                        directory_temporanea = ""  # Reset della variabile globale
+                    except Exception as e:
+                        # Fallback: pulizia manuale più sicura
+                        log_message(f"Pulizia manuale della directory temporanea...")
+                        try:
+                            for root, dirs, files in os.walk(dir_path, topdown=False):
+                                # Rimuovi i file
+                                for file in files:
+                                    try:
+                                        file_path = os.path.join(root, file)
+                                        if os.path.exists(file_path):
+                                            os.remove(file_path)
+                                    except Exception:
+                                        continue
+                                # Rimuovi le directory vuote
+                                for dir_name in dirs:
+                                    try:
+                                        dir_to_remove = os.path.join(root, dir_name)
+                                        if os.path.exists(dir_to_remove):
+                                            os.rmdir(dir_to_remove)
+                                    except Exception:
+                                        continue
+                            # Rimuovi la directory principale
+                            if os.path.exists(dir_path):
+                                os.rmdir(dir_path)
+                            log_message(f"Directory {dir_path} pulita manualmente")
+                            directory_temporanea = ""
+                        except Exception as e2:
+                            log_message(f"Avviso: Pulizia parziale della directory temporanea")
+                            log_message("Alcuni file temporanei saranno puliti al riavvio del sistema")
+                else:
+                    log_message("Nessuna directory temporanea da pulire")
+                    
+            except Exception as main_error:
+                log_message(f"Errore durante pulizia: {str(main_error)}")
+                log_message("Il plugin continuerà a funzionare normalmente")
 
             # Resetta l'interfaccia
             self.dlg.le_folder.setFilePath("")
@@ -453,6 +523,30 @@ class CatastoIT_GML_Merger_Pro:
         self.processing_active = False
         self.dlg.btn_stop.setEnabled(False)
         self.dlg.btn_process.setEnabled(True)
+    
+    def safe_cleanup_and_close(self, cleanup_func):
+        """Esegue la pulizia in modo sicuro senza far crashare il plugin"""
+        try:
+            # Esegui la funzione di pulizia
+            cleanup_func()
+        except Exception as e:
+            # Se la pulizia fallisce, logga l'errore ma non far crashare il plugin
+            print(f"Errore durante la pulizia: {e}")
+            try:
+                # Prova a resettare almeno l'interfaccia
+                self.dlg.le_folder.setFilePath("")
+                self.dlg.le_temp_folder.setFilePath("")
+                self.dlg.le_map_output.setText("")
+                self.dlg.le_ple_output.setText("")
+                self.dlg.cb_file_type.setCurrentIndex(0)
+                self.dlg.cb_format.setCurrentIndex(0)
+                self.dlg.cb_region.setCurrentIndex(0)
+                self.dlg.text_log.append("Interfaccia resettata - pulizia file parziale")
+            except Exception:
+                pass
+        
+        # Non chiudere automaticamente il dialog per evitare crash
+        # L'utente può chiuderlo manualmente se necessario
 
     # def update_progress(self, value):
         # """Aggiorna la barra di progresso"""
@@ -546,9 +640,16 @@ class GmlProcessingTask(QgsTask):
         temp_dir = None
         try:
             # Creiamo una directory temporanea minima
-            temp_dir = tempfile.mkdtemp()
+            if self.inputs.get('temp_folder'):
+                # Usa la cartella temporanea personalizzata
+                temp_dir = tempfile.mkdtemp(dir=self.inputs['temp_folder'])
+                self.log_message.emit(f"Directory temporanea personalizzata creata: {temp_dir}\n")
+            else:
+                # Usa la cartella temporanea di sistema
+                temp_dir = tempfile.mkdtemp()
+                self.log_message.emit(f"Directory temporanea di sistema creata: {temp_dir}\n")
+            
             self.directory_temporanea = temp_dir
-            self.log_message.emit(f"Directory temporanea creata: {temp_dir}\n")
             
             # Crea le cartelle di output per i file GML solo al bisogno
             map_folder = os.path.join(temp_dir, "map_files")
@@ -801,8 +902,25 @@ class GmlProcessingTask(QgsTask):
             temp_dir = self.directory_temporanea
             # Crea una sottodirectory specifica per l'operazione di merge 
             merge_subdir = os.path.join(temp_dir, f"merge_{file_type}")
-            os.makedirs(merge_subdir, exist_ok=True)
+            try:
+                os.makedirs(merge_subdir, exist_ok=True)
+            except Exception as e:
+                self.log_message.emit(f"ERRORE: Impossibile creare directory di merge: {str(e)}")
+                return None
+                
             temp_merge = os.path.join(merge_subdir, f"temp_merge_{file_type}_{int(time.time())}.gpkg")
+            
+            # Verifica spazio disco disponibile nella directory temporanea
+            try:
+                import shutil
+                free_space = shutil.disk_usage(merge_subdir).free
+                free_space_gb = free_space / (1024**3)
+                self.log_message.emit(f"Spazio libero in directory temporanea: {free_space_gb:.1f} GB")
+                
+                if free_space_gb < 1.0:  # Meno di 1GB libero
+                    self.log_message.emit(f"ATTENZIONE: Poco spazio libero ({free_space_gb:.1f} GB) nella directory temporanea")
+            except Exception as e:
+                self.log_message.emit(f"Avviso: Impossibile verificare spazio disco: {str(e)}")
 
             # Verifica directory di output e creala se necessario
             output_dir = os.path.dirname(output_file)
@@ -855,7 +973,52 @@ class GmlProcessingTask(QgsTask):
                 }
 
                 self.log_message.emit(f"Unione file {file_type}...")
-                processing.run("native:mergevectorlayers", merge_params)
+                self.log_message.emit(f"File temporaneo merge: {temp_merge}")
+                self.log_message.emit(f"Numero file da unire: {len(source_files)}")
+                
+                # Verifica che il percorso del file temporaneo sia valido
+                if not os.access(os.path.dirname(temp_merge), os.W_OK):
+                    self.log_message.emit(f"ERRORE: Directory temporanea non scrivibile: {os.path.dirname(temp_merge)}")
+                    return None
+                
+                # Verifica che i file sorgente esistano e siano leggibili
+                valid_source_files = []
+                for sf in source_files:
+                    if os.path.exists(sf) and os.access(sf, os.R_OK):
+                        valid_source_files.append(sf)
+                    else:
+                        self.log_message.emit(f"ATTENZIONE: File sorgente non accessibile: {sf}")
+                
+                if not valid_source_files:
+                    self.log_message.emit("ERRORE: Nessun file sorgente valido trovato")
+                    return None
+                
+                if len(valid_source_files) != len(source_files):
+                    self.log_message.emit(f"Procedo con {len(valid_source_files)} file validi su {len(source_files)} totali")
+                    merge_params["LAYERS"] = valid_source_files
+                
+                try:
+                    processing.run("native:mergevectorlayers", merge_params)
+                    self.log_message.emit(f"Unione completata: {temp_merge}")
+                except Exception as e:
+                    self.log_message.emit(f"ERRORE durante l'unione standard: {str(e)}")
+                    self.log_message.emit("Tentativo con strategia alternativa...")
+                    
+                    # Strategia alternativa: prova con batch più piccoli
+                    try:
+                        temp_merge = self.merge_files_alternative(valid_source_files, temp_merge, file_type)
+                        if temp_merge is None:
+                            self.log_message.emit("ERRORE: Anche la strategia alternativa è fallita")
+                            return None
+                        self.log_message.emit("Unione alternativa completata con successo")
+                    except Exception as e2:
+                        self.log_message.emit(f"ERRORE anche con strategia alternativa: {str(e2)}")
+                        # Prova a usare una directory diversa se possibile
+                        if hasattr(self, 'inputs') and self.inputs.get('temp_folder'):
+                            self.log_message.emit("Prova a specificare una directory temporanea diversa con più spazio disponibile")
+                        else:
+                            self.log_message.emit("Prova a specificare una directory temporanea personalizzata nell'interfaccia")
+                        return None
 
                 # Chiudi esplicitamente i riferimenti ai layer che potrebbero utilizzare il file temporaneo
                 for layer_id, layer in list(project.mapLayers().items()):
@@ -1040,3 +1203,200 @@ class GmlProcessingTask(QgsTask):
             import traceback
             self.log_message.emit(f"Dettagli: {traceback.format_exc()}")
             return None
+
+    def merge_files_alternative(self, source_files, output_path, file_type):
+        """Strategia alternativa di merge che elabora i file in batch più piccoli"""
+        try:
+            self.log_message.emit(f"Tentativo merge alternativo con {len(source_files)} file...")
+            
+            # Rimuovi il file di output se esiste già
+            if os.path.exists(output_path):
+                try:
+                    os.remove(output_path)
+                except Exception as e:
+                    self.log_message.emit(f"Attenzione: impossibile rimuovere file esistente: {e}")
+            
+            # Prima strategia: prova con batch più piccoli (10 file alla volta)
+            batch_size = 10
+            temp_files = []
+            
+            for i in range(0, len(source_files), batch_size):
+                if self.isCanceled():
+                    return None
+                    
+                batch = source_files[i:i + batch_size]
+                batch_output = f"{os.path.splitext(output_path)[0]}_batch_{i//batch_size}.gpkg"
+                
+                self.log_message.emit(f"Elaborazione batch {i//batch_size + 1}: {len(batch)} file")
+                
+                # Prova a unire questo batch con parametri migliorati per evitare conflitti FID
+                batch_params = {
+                    "LAYERS": batch,
+                    "CRS": None,
+                    "OUTPUT": batch_output,
+                    "SEPARATE_LAYERS": False,  # Unisce tutto in un singolo layer
+                }
+                
+                try:
+                    # Prova prima con QGIS processing
+                    processing.run("native:mergevectorlayers", batch_params)
+                    temp_files.append(batch_output)
+                    self.log_message.emit(f"Batch {i//batch_size + 1} completato")
+                except Exception as e:
+                    self.log_message.emit(f"Errore nel batch {i//batch_size + 1} con QGIS: {str(e)}")
+                    # Prova con merge GDAL alternativo
+                    try:
+                        success = self.merge_with_gdal(batch, batch_output, file_type)
+                        if success:
+                            temp_files.append(batch_output)
+                            self.log_message.emit(f"Batch {i//batch_size + 1} completato con GDAL")
+                        else:
+                            # Se anche GDAL fallisce, usa singoli file
+                            for single_file in batch:
+                                if os.path.exists(single_file) and os.path.getsize(single_file) > 0:
+                                    temp_files.append(single_file)
+                    except Exception as e2:
+                        self.log_message.emit(f"Errore anche con GDAL: {str(e2)}")
+                        # Come ultimo resort, usa singoli file
+                        for single_file in batch:
+                            if os.path.exists(single_file) and os.path.getsize(single_file) > 0:
+                                temp_files.append(single_file)
+            
+            if not temp_files:
+                self.log_message.emit("Nessun file valido per il merge alternativo")
+                return None
+            
+            # Ora unisci i file temporanei
+            if len(temp_files) == 1:
+                # Se c'è solo un file, copialo direttamente
+                import shutil
+                shutil.copy2(temp_files[0], output_path)
+                self.log_message.emit("File unico copiato come output")
+            else:
+                # Unisci i file temporanei
+                final_merge_params = {
+                    "LAYERS": temp_files,
+                    "CRS": None,
+                    "OUTPUT": output_path,
+                }
+                
+                processing.run("native:mergevectorlayers", final_merge_params)
+                self.log_message.emit("Merge finale completato")
+            
+            # Pulisci i file temporanei batch
+            for temp_file in temp_files:
+                if temp_file != output_path and os.path.exists(temp_file):
+                    try:
+                        os.remove(temp_file)
+                    except Exception as e:
+                        self.log_message.emit(f"Avviso: impossibile rimuovere file temporaneo {temp_file}: {e}")
+            
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                return output_path
+            else:
+                self.log_message.emit("Il file di output non è stato creato correttamente")
+                return None
+                
+        except Exception as e:
+            self.log_message.emit(f"ERRORE nella strategia alternativa: {str(e)}")
+            import traceback
+            self.log_message.emit(f"Dettagli: {traceback.format_exc()}")
+            return None
+
+    def merge_with_gdal(self, source_files, output_path, file_type):
+        """Merge files using GDAL/OGR directly to avoid FID conflicts"""
+        try:
+            from osgeo import ogr, gdal
+            
+            # Rimuovi il file di output se esiste
+            if os.path.exists(output_path):
+                os.remove(output_path)
+            
+            # Apri il primo file per ottenere la struttura
+            first_source = ogr.Open(source_files[0])
+            if not first_source:
+                self.log_message.emit(f"Impossibile aprire il primo file: {source_files[0]}")
+                return False
+            
+            first_layer = first_source.GetLayer(0)
+            if not first_layer:
+                self.log_message.emit("Impossibile ottenere il layer dal primo file")
+                return False
+                
+            # Crea il file di output
+            driver = ogr.GetDriverByName("GPKG")
+            output_ds = driver.CreateDataSource(output_path)
+            if not output_ds:
+                self.log_message.emit(f"Impossibile creare il file di output: {output_path}")
+                return False
+            
+            # Crea il layer di output con geometria generica per evitare conflitti POLYGON/MULTIPOLYGON
+            geom_type = ogr.wkbUnknown  # Permette qualsiasi tipo di geometria
+            output_layer = output_ds.CreateLayer("merged_layer", first_layer.GetSpatialRef(), geom_type)
+            
+            # Copia la definizione dei campi dal primo layer
+            layer_defn = first_layer.GetLayerDefn()
+            for i in range(layer_defn.GetFieldCount()):
+                field_defn = layer_defn.GetFieldDefn(i)
+                # Aumenta la lunghezza massima per i campi stringa per evitare troncamenti
+                if field_defn.GetType() == ogr.OFTString:
+                    field_defn.SetWidth(254)  # Lunghezza massima per string field
+                output_layer.CreateField(field_defn)
+            
+            first_source = None  # Chiudi il primo file
+            
+            # Processa tutti i file
+            feature_count = 0
+            for i, source_file in enumerate(source_files):
+                if self.isCanceled():
+                    return False
+                    
+                self.log_message.emit(f"Processando file {i+1}/{len(source_files)}: {os.path.basename(source_file)}")
+                
+                source_ds = ogr.Open(source_file)
+                if not source_ds:
+                    self.log_message.emit(f"Impossibile aprire file: {source_file}")
+                    continue
+                
+                source_layer = source_ds.GetLayer(0)
+                if not source_layer:
+                    self.log_message.emit(f"Impossibile ottenere layer da: {source_file}")
+                    continue
+                
+                # Copia tutte le feature dal layer sorgente
+                for feature in source_layer:
+                    if self.isCanceled():
+                        return False
+                    
+                    # Crea una nuova feature per il layer di output
+                    new_feature = ogr.Feature(output_layer.GetLayerDefn())
+                    
+                    # Copia tutti i campi
+                    for field_idx in range(feature.GetFieldCount()):
+                        field_name = feature.GetFieldDefnRef(field_idx).GetName()
+                        if output_layer.GetLayerDefn().GetFieldIndex(field_name) != -1:
+                            new_feature.SetField(field_name, feature.GetField(field_idx))
+                    
+                    # Copia la geometria
+                    geom = feature.GetGeometryRef()
+                    if geom:
+                        new_feature.SetGeometry(geom.Clone())
+                    
+                    # Aggiungi la feature al layer di output (il FID verrà assegnato automaticamente)
+                    if output_layer.CreateFeature(new_feature) != ogr.OGRERR_NONE:
+                        self.log_message.emit(f"Errore nell'aggiunta di una feature dal file: {source_file}")
+                    else:
+                        feature_count += 1
+                    
+                    new_feature = None  # Cleanup
+                
+                source_ds = None  # Chiudi il file sorgente
+                
+            output_ds = None  # Chiudi il file di output
+            
+            self.log_message.emit(f"GDAL merge completato: {feature_count} features unite")
+            return True
+            
+        except Exception as e:
+            self.log_message.emit(f"ERRORE nel merge GDAL: {str(e)}")
+            return False

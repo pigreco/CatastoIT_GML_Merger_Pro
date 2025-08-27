@@ -6,7 +6,7 @@
 name=CatastoIT_GML_Merger_Pro
 qgisMinimumVersion=3.22
 description=CatastoIT_GML_Merger_Pro
-version=0.3
+version=0.3c
 author=Salvatore Fiandaca, Giulio Fattori
 email=pigrecoinfinito@gmail.com
 
