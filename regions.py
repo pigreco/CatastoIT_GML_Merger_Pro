@@ -25,7 +25,7 @@ PROVINCES_BY_REGION = {
     
     "LOMBARDIA": ["BG", "BS", "CO", "CR", "LC", "LO", "MN", "MI", "MB", "PV", "SO", "VA"],
     
-    "MARCHE": ["AN", "AP", "FM", "MC", "PU"],
+    "MARCHE": ["AN", "AP", "FM", "MC", "PS"],
     
     "MOLISE": ["CB", "IS"],
     
@@ -59,7 +59,7 @@ PROVINCE_CODES_TO_NAMES = {
     "GE": "Genova", "IM": "Imperia", "SP": "La Spezia", "SV": "Savona",
     "BG": "Bergamo", "BS": "Brescia", "CO": "Como", "CR": "Cremona", "LC": "Lecco", "LO": "Lodi", 
     "MN": "Mantova", "MI": "Milano", "MB": "Monza e della Brianza", "PV": "Pavia", "SO": "Sondrio", "VA": "Varese",
-    "AN": "Ancona", "AP": "Ascoli Piceno", "FM": "Fermo", "MC": "Macerata", "PU": "Pesaro e Urbino",
+    "AN": "Ancona", "AP": "Ascoli Piceno", "FM": "Fermo", "MC": "Macerata", "PS": "Pesaro e Urbino",
     "CB": "Campobasso", "IS": "Isernia",
     "AL": "Alessandria", "AT": "Asti", "BI": "Biella", "CN": "Cuneo", "NO": "Novara", 
     "TO": "Torino", "VB": "Verbano-Cusio-Ossola", "VC": "Vercelli",
