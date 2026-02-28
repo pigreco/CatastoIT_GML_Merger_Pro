@@ -13,7 +13,7 @@ email=pigrecoinfinito@gmail.com
 about= <b>Catasto IT GML Merger Pro</b> è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano (fonte RNDT/AdE). Permette di selezionare regione, province e — novità v0.4 — singoli comuni tramite widget di selezione interattivo. Converte i dati in GPKG aggiungendo i campi foglio, particella e sezione censuaria. Lavora in background senza bloccare QGIS.<br><br>EN: Advanced QGIS plugin to download, extract and merge Italian cadastral GML files (RNDT/AdE). Supports region, province and — new in v0.4 — municipality filtering via an interactive transfer widget. Outputs GPKG with calculated fields (sheet, parcel, census section). Runs in background.
 
 tracker=https://github.com/pigreco/CatastoIT_GML_Merger_Pro/issues
-repository=https://github.com/pigreco/CatastoIT_GML_Merger_Pro/blob/main/README.md
+repository=https://github.com/pigreco/CatastoIT_GML_Merger_Pro
 # End of mandatory metadata
 
 # Recommended items:
@@ -27,7 +27,7 @@ changelog= v 0.1 Scarica set particelle e mappe catastali per regione in formato
 # Tags are comma separated with spaces allowed
 tags=catasto, particelle, fogli, regione, provincia, comune, italia, gml, gpkg, ade
 
-homepage=https://github.com/pigreco/CatastoIT_GML_Merger_Pro/blob/main/README.md
+homepage=https://github.com/pigreco/CatastoIT_GML_Merger_Pro
 category=Plugins
 icon=icon.png
 # experimental flag
