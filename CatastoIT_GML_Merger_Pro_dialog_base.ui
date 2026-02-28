@@ -465,44 +465,49 @@
       </widget>
      </item>
      <item row="3" column="1">
-      <layout class="QHBoxLayout" name="horizontalLayout_comuni">
-       <item>
-        <layout class="QVBoxLayout" name="verticalLayout_comuni_disponibili">
-         <item>
-          <widget class="QLineEdit" name="le_cerca_comune">
-           <property name="placeholderText">
-            <string>Cerca comune...</string>
-           </property>
-           <property name="clearButtonEnabled">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QListWidget" name="list_comuni_disponibili">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>80</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>120</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>Comuni disponibili. Doppio clic o → per aggiungere al filtro.</string>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(226, 226, 226);</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+      <layout class="QGridLayout" name="gridLayout_comuni">
+       <item row="0" column="0">
+        <widget class="QLineEdit" name="le_cerca_comune">
+         <property name="placeholderText">
+          <string>Cerca comune...</string>
+         </property>
+         <property name="clearButtonEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
-       <item>
+       <item row="0" column="2">
+        <widget class="QLabel" name="label_comuni_selezionati">
+         <property name="text"><string>Selezionati (0)</string></property>
+         <property name="toolTip"><string>Comuni inclusi nel filtro di elaborazione</string></property>
+         <property name="alignment">
+          <set>Qt::AlignVCenter|Qt::AlignLeft</set>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QListWidget" name="list_comuni_disponibili">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>80</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>120</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Comuni disponibili. Doppio clic o → per aggiungere al filtro.</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(226, 226, 226);</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
         <layout class="QVBoxLayout" name="verticalLayout_comuni_buttons">
          <item>
           <spacer>
@@ -536,37 +541,27 @@
          </item>
         </layout>
        </item>
-       <item>
-        <layout class="QVBoxLayout" name="verticalLayout_comuni_selezionati">
-         <item>
-          <widget class="QLabel" name="label_comuni_selezionati">
-           <property name="text"><string>Selezionati (0)</string></property>
-           <property name="toolTip"><string>Comuni inclusi nel filtro di elaborazione</string></property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QListWidget" name="list_comuni_selezionati">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>80</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>120</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>Comuni selezionati per il filtro. Doppio clic o ← per rimuovere.</string>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(255, 255, 200);</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+       <item row="1" column="2">
+        <widget class="QListWidget" name="list_comuni_selezionati">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>80</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>120</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Comuni selezionati per il filtro. Doppio clic o ← per rimuovere.</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(255, 255, 200);</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </item>
