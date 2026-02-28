@@ -26,6 +26,7 @@ import gc
 import io
 import os
 import os.path
+import re
 import shutil
 import tempfile
 import time
@@ -281,14 +282,14 @@ class CatastoIT_GML_Merger_Pro:
             log_message(f"Province selezionate: {inputs['province_code']}")
             print(f"Province selezionate: {inputs['province_code']}")
 
-            # Filtro comuni per codice ISTAT (opzionale)
+            # Filtro comuni per codice Belfiore (opzionale)
             comuni_raw = self.dlg.le_comuni.text().strip()
             if comuni_raw:
-                comuni_list = [c.strip() for c in comuni_raw.split(',') if c.strip()]
-                # Valida: codici ISTAT comuni sono 6 cifre numeriche
-                invalid_codes = [c for c in comuni_list if not (c.isdigit() and len(c) == 6)]
+                comuni_list = [c.strip().upper() for c in comuni_raw.split(',') if c.strip()]
+                # Valida: codice Belfiore = 1 lettera + 3 cifre (es. A070, H501)
+                invalid_codes = [c for c in comuni_list if not re.match(r'^[A-Z]\d{3}$', c)]
                 if invalid_codes:
-                    log_message(f"<span style='color:red;font-weight:bold;'>ERRORE: Codici ISTAT non validi (devono essere 6 cifre): {', '.join(invalid_codes)}</span>")
+                    log_message(f"<span style='color:red;font-weight:bold;'>ERRORE: Codici Belfiore non validi (formato: 1 lettera + 3 cifre, es. A070): {', '.join(invalid_codes)}</span>")
                     return None
                 inputs['comuni_filter'] = comuni_list
                 log_message(f"Filtro comuni attivo: {', '.join(comuni_list)}")
@@ -711,7 +712,7 @@ class GmlProcessingTask(QgsTask):
                 self.inputs["ple_output"] = f"{base_name}_{province_suffix}{ext}"
                 self.log_message.emit(f"Output PLE aggiornato: {self.inputs['ple_output']}")
 
-            # Aggiunge suffisso con codici ISTAT se il filtro comuni è attivo
+            # Aggiunge suffisso con codici Belfiore se il filtro comuni è attivo
             comuni_filter = self.inputs.get('comuni_filter', [])
             if comuni_filter:
                 comuni_suffix = "_".join(comuni_filter)
@@ -790,11 +791,12 @@ class GmlProcessingTask(QgsTask):
 
                                 com_name = os.path.basename(com_zip_path)
 
-                                # Filtro per codice ISTAT comune (opzionale)
+                                # Filtro per codice Belfiore comune (opzionale)
+                                # com_name es: "A070_AGIRA.zip" → codice = "A070"
                                 comuni_filter = self.inputs.get('comuni_filter', [])
                                 if comuni_filter:
-                                    com_istat = os.path.splitext(com_name)[0]
-                                    if com_istat not in comuni_filter:
+                                    com_belfiore = os.path.splitext(com_name)[0].split('_')[0].upper()
+                                    if com_belfiore not in comuni_filter:
                                         continue
 
                                 processed_comuni += 1
