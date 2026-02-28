@@ -104,7 +104,7 @@
         <widget class="QComboBox" name="cb_file_type">
          <property name="maximumSize">
           <size>
-           <width>300</width>
+           <width>150</width>
            <height>16777215</height>
           </size>
          </property>
@@ -137,7 +137,7 @@
        <item>
         <widget class="QCheckBox" name="cb_sez_censu">
          <property name="toolTip">
-          <string>Attiva/DIsattiva Calcolo Sezione Censuaria</string>
+          <string>Attiva/Disattiva Calcolo Sezione Censuaria</string>
          </property>
          <property name="layoutDirection">
           <enum>Qt::RightToLeft</enum>
@@ -146,7 +146,23 @@
           <bool>false</bool>
          </property>
          <property name="text">
-          <string>Aggiungi Sezione Censuaria nella Particelle</string>
+          <string>Aggiungi Sezione Censuaria</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cb_nome_comune">
+         <property name="toolTip">
+          <string>Aggiunge il campo 'comune' con il nome del comune ricavato dal codice Belfiore</string>
+         </property>
+         <property name="text">
+          <string>Aggiungi Nome Comune</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
          </property>
         </widget>
        </item>

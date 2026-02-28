@@ -27,6 +27,7 @@ import io
 import os
 import os.path
 import shutil
+import sqlite3
 import tempfile
 import time
 import urllib.request
@@ -45,6 +46,7 @@ import processing
 from .resources import *
 # Import the code for the dialog
 from .CatastoIT_GML_Merger_Pro_dialog import CatastoIT_GML_Merger_ProDialog
+from .comuni import COMUNI_BY_CODE
 
 directory_temporanea = ""                
 
@@ -260,6 +262,11 @@ class CatastoIT_GML_Merger_Pro:
             if inputs['add_sezione_censuaria']:
                 log_message("Opzione 'Aggiungi Sezione Censuaria nelle Particelle' attivata")
                 print("Sezione censuaria attivata")
+
+            # Verifica lo stato del checkbox per nome comune
+            inputs['add_nome_comune'] = self.dlg.cb_nome_comune.isChecked()
+            if inputs['add_nome_comune']:
+                log_message("Opzione 'Aggiungi Nome Comune' attivata")
             
             inputs['url'] = self.dlg.le_url.text()
             if not inputs['url']:
@@ -1096,6 +1103,27 @@ class GmlProcessingTask(QgsTask):
                 result = processing.run("native:retainfields", filter_params)
                 output_file = result['OUTPUT']
 
+                # Fix CRS: native:retainfields non propaga il metadato SRS nel GPKG.
+                # Scriviamo EPSG:6706 direttamente nelle tabelle SRS del file GPKG.
+                if output_file.lower().endswith('.gpkg'):
+                    try:
+                        crs_ref = QgsCoordinateReferenceSystem('EPSG:6706')
+                        conn = sqlite3.connect(output_file)
+                        c = conn.cursor()
+                        c.execute(
+                            "INSERT OR REPLACE INTO gpkg_spatial_ref_sys "
+                            "(srs_name, srs_id, organization, organization_coordsys_id, definition) "
+                            "VALUES (?,?,?,?,?)",
+                            (crs_ref.description(), 6706, 'EPSG', 6706, crs_ref.toWkt())
+                        )
+                        c.execute("UPDATE gpkg_geometry_columns SET srs_id=6706")
+                        c.execute("UPDATE gpkg_contents SET srs_id=6706")
+                        conn.commit()
+                        conn.close()
+                        self.log_message.emit("CRS EPSG:6706 assegnato al file GPKG")
+                    except Exception as e:
+                        self.log_message.emit(f"Avviso: impossibile assegnare CRS al GPKG: {e}")
+
                 # Ottimizzazione della generazione dei campi utilizzando operazioni in batch
                 self.log_message.emit(f"Aggiunta campo 'foglio' al layer {file_type}...")
                 output_layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
@@ -1110,6 +1138,10 @@ class GmlProcessingTask(QgsTask):
                         if self.inputs.get("add_sezione_censuaria", False):
                             self.log_message.emit("Aggiunta campo 'sez_censuaria'...")
                             fields_to_add.append(QgsField("sez_censuaria", QVariant.String, len=1))
+                    # Aggiungi campo nome comune se richiesto (vale per MAP e PLE)
+                    if self.inputs.get("add_nome_comune", False):
+                        self.log_message.emit("Aggiunta campo 'comune'...")
+                        fields_to_add.append(QgsField("comune", QVariant.String))
                     
                     # Inizia la transazione per le modifiche in batch
                     output_layer.startEditing()
@@ -1121,10 +1153,13 @@ class GmlProcessingTask(QgsTask):
                     particella_idx = output_layer.fields().indexFromName("particella") if file_type == "PLE" else -1
                     sez_censuaria_idx = output_layer.fields().indexFromName("sez_censuaria") if file_type == "PLE" and self.inputs.get("add_sezione_censuaria", False) else -1
                     gml_id_idx = output_layer.fields().indexFromName("gml_id")
-                    
+                    au_idx = output_layer.fields().indexFromName("ADMINISTRATIVEUNIT")
+                    comune_idx = output_layer.fields().indexFromName("comune") if self.inputs.get("add_nome_comune", False) else -1
+
                     # Calcola valori una sola volta
                     needs_particella = file_type == "PLE" and particella_idx >= 0
                     needs_sez_censuaria = file_type == "PLE" and sez_censuaria_idx >= 0
+                    needs_nome_comune = comune_idx >= 0 and au_idx >= 0
                     
                     # Inizializza il buffer per le modifiche prima di usarlo
                     changes_buffer = {}
@@ -1148,6 +1183,13 @@ class GmlProcessingTask(QgsTask):
                             if needs_sez_censuaria and len(gml_id) > 32:
                                 sez_censuaria = gml_id[31:32]
                                 changes_buffer[feature_id][sez_censuaria_idx] = sez_censuaria
+
+                        # Aggiungi nome comune da ADMINISTRATIVEUNIT (codice Belfiore)
+                        if needs_nome_comune:
+                            belfiore = feature[au_idx]
+                            if belfiore:
+                                nome_comune = COMUNI_BY_CODE.get(str(belfiore).upper(), ('',))[0]
+                                changes_buffer.setdefault(feature_id, {})[comune_idx] = nome_comune
                     
                     # Applica tutte le modifiche in batch
                     batch_size = 500  # Controlla annullamento ogni 500 feature
