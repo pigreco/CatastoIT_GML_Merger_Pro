@@ -46,6 +46,17 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
 
         self.setWindowFlags(self.windowFlags() | Qt.WindowMinimizeButtonHint)
 
+        # Legge la versione da metadata.txt e la mostra nel titolo
+        try:
+            import configparser
+            cfg = configparser.ConfigParser()
+            cfg.read(os.path.join(os.path.dirname(__file__), 'metadata.txt'))
+            version = cfg.get('general', 'version', fallback='')
+            if version:
+                self.setWindowTitle(f"Catasto IT GML Merger Pro - v{version}")
+        except Exception:
+            pass
+
         if not hasattr(self, 'btn_cancel'):
             self.btn_cancel = QPushButton("Annulla", self)
             self.btn_cancel.setVisible(False)

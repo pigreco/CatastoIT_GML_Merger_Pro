@@ -212,43 +212,76 @@
        </property>
       </widget>
      </item>
-     <item row="20" column="1" alignment="Qt::AlignRight">
-      <widget class="QPushButton" name="btn_close">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>500</width>
-         <height>30</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>Pulisce dai file temporanei e Chiude finestra.</string>
-       </property>
-       <property name="layoutDirection">
-        <enum>Qt::LeftToRight</enum>
-       </property>
-       <property name="styleSheet">
-        <string>background-color:rgb(185, 132, 88); color: white; font-weight: bold;</string>
-       </property>
-       <property name="text">
-        <string>Pulisci File Temporanei e Chiudi</string>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>:/images/themes/default/console/iconClearConsole.svg</normaloff>:/images/themes/default/console/iconClearConsole.svg</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>25</width>
-         <height>25</height>
-        </size>
-       </property>
-      </widget>
+     <item row="20" column="1">
+      <layout class="QHBoxLayout">
+       <item alignment="Qt::AlignRight">
+        <widget class="QPushButton" name="btn_close">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>500</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Pulisce dai file temporanei e Chiude finestra.</string>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="styleSheet">
+          <string>background-color:rgb(185, 132, 88); color: white; font-weight: bold;</string>
+         </property>
+         <property name="text">
+          <string>Pulisci File Temporanei e Chiudi</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>:/images/themes/default/console/iconClearConsole.svg</normaloff>:/images/themes/default/console/iconClearConsole.svg</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>25</width>
+           <height>25</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_guida">
+         <property name="maximumSize">
+          <size>
+           <width>130</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Apre la guida online del plugin</string>
+         </property>
+         <property name="styleSheet">
+          <string>background-color: rgba(74, 158, 255, 0.75); color: white; font-weight: bold;</string>
+         </property>
+         <property name="text">
+          <string>Guida online</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>:/qt-project.org/styles/commonstyle/images/help-32.png</normaloff>:/qt-project.org/styles/commonstyle/images/help-32.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>18</width>
+           <height>18</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item row="11" column="1">
       <widget class="QLineEdit" name="le_map_output">
@@ -625,35 +658,6 @@
       <widget class="QLabel" name="label_9">
        <property name="text">
         <string>Riproietta [Opzionale]</string>
-       </property>
-      </widget>
-     </item>
-     <item row="15" column="1" alignment="Qt::AlignRight">
-      <widget class="QPushButton" name="btn_guida">
-       <property name="maximumSize">
-        <size>
-         <width>140</width>
-         <height>28</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>Apre la guida online del plugin</string>
-       </property>
-       <property name="styleSheet">
-        <string>background-color: rgba(74, 158, 255, 0.75); color: white; font-weight: bold;</string>
-       </property>
-       <property name="text">
-        <string>Guida online</string>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>:/qt-project.org/styles/commonstyle/images/help-32.png</normaloff>:/qt-project.org/styles/commonstyle/images/help-32.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>18</width>
-         <height>18</height>
-        </size>
        </property>
       </widget>
      </item>
