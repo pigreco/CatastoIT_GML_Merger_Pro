@@ -457,17 +457,26 @@
         <string>Filtro Comuni [Opz.]:</string>
        </property>
        <property name="toolTip">
-        <string>Filtra per codice Belfiore comune (1 lettera + 3 cifre). Lascia vuoto per tutti i comuni della provincia selezionata.</string>
+        <string>Seleziona uno o più comuni (CTRL+clic). Disponibile solo quando è selezionata una provincia.</string>
        </property>
       </widget>
      </item>
      <item row="3" column="1">
-      <widget class="QLineEdit" name="le_comuni">
-       <property name="toolTip">
-        <string>Inserisci uno o più codici Belfiore separati da virgola (es: A070, H501). Lascia vuoto per scaricare tutti i comuni della provincia selezionata.</string>
+      <widget class="QListWidget" name="list_comuni">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>55</height>
+        </size>
        </property>
-       <property name="placeholderText">
-        <string>Codice/i Belfiore comune (es: A070, H501). Vuoto = tutti i comuni</string>
+       <property name="toolTip">
+        <string>Seleziona uno o più comuni (CTRL+clic). Lascia vuoto per tutti i comuni della provincia.</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(226, 226, 226);</string>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::MultiSelection</enum>
        </property>
       </widget>
      </item>

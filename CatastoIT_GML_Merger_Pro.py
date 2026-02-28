@@ -26,7 +26,6 @@ import gc
 import io
 import os
 import os.path
-import re
 import shutil
 import tempfile
 import time
@@ -282,17 +281,13 @@ class CatastoIT_GML_Merger_Pro:
             log_message(f"Province selezionate: {inputs['province_code']}")
             print(f"Province selezionate: {inputs['province_code']}")
 
-            # Filtro comuni per codice Belfiore (opzionale)
-            comuni_raw = self.dlg.le_comuni.text().strip()
-            if comuni_raw:
-                comuni_list = [c.strip().upper() for c in comuni_raw.split(',') if c.strip()]
-                # Valida: codice Belfiore = 1 lettera + 3 cifre (es. A070, H501)
-                invalid_codes = [c for c in comuni_list if not re.match(r'^[A-Z]\d{3}$', c)]
-                if invalid_codes:
-                    log_message(f"<span style='color:red;font-weight:bold;'>ERRORE: Codici Belfiore non validi (formato: 1 lettera + 3 cifre, es. A070): {', '.join(invalid_codes)}</span>")
-                    return None
+            # Filtro comuni: legge i codici Belfiore dagli item selezionati in list_comuni
+            selected_comuni = self.dlg.list_comuni.selectedItems()
+            if selected_comuni:
+                comuni_list = [item.data(Qt.UserRole) for item in selected_comuni]
+                comuni_nomi = [item.text() for item in selected_comuni]
                 inputs['comuni_filter'] = comuni_list
-                log_message(f"Filtro comuni attivo: {', '.join(comuni_list)}")
+                log_message(f"Filtro comuni attivo: {', '.join(comuni_nomi)}")
             else:
                 inputs['comuni_filter'] = []
 
@@ -494,7 +489,7 @@ class CatastoIT_GML_Merger_Pro:
             self.dlg.cb_format.setCurrentIndex(0)
             self.dlg.cb_region.setCurrentIndex(0)
             self.dlg.list_provinces.clearSelection()  # Cancella le selezioni dalla lista
-            self.dlg.le_comuni.clear()
+            self.dlg.list_comuni.clearSelection()
             self.dlg.cb_region.setEnabled(True)
             self.dlg.le_url.setEnabled(True)
             self.dlg.le_url.clear()
@@ -563,7 +558,7 @@ class CatastoIT_GML_Merger_Pro:
                 self.dlg.le_temp_folder.setFilePath("")
                 self.dlg.le_map_output.setText("")
                 self.dlg.le_ple_output.setText("")
-                self.dlg.le_comuni.clear()
+                self.dlg.list_comuni.clearSelection()
                 self.dlg.cb_file_type.setCurrentIndex(0)
                 self.dlg.cb_format.setCurrentIndex(0)
                 self.dlg.cb_region.setCurrentIndex(0)
