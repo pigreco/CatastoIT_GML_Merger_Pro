@@ -129,6 +129,7 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         # Usando setText invece di setFilePath per i QLineEdit
         self.le_map_output.setText("")
         self.le_ple_output.setText("")
+        self.le_comuni.clear()
         self.cb_file_type.setCurrentIndex(0)
         self.cb_format.setCurrentIndex(0)
         self.cb_region.setCurrentIndex(0)

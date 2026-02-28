@@ -451,6 +451,26 @@
        </item>
       </layout>
      </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_comuni">
+       <property name="text">
+        <string>Filtro Comuni [Opz.]:</string>
+       </property>
+       <property name="toolTip">
+        <string>Filtra per codice ISTAT comune. Lascia vuoto per tutti i comuni della provincia selezionata.</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QLineEdit" name="le_comuni">
+       <property name="toolTip">
+        <string>Inserisci uno o più codici ISTAT comuni separati da virgola (es: 015001, 015002). Lascia vuoto per scaricare tutti i comuni della provincia selezionata.</string>
+       </property>
+       <property name="placeholderText">
+        <string>Codice/i ISTAT comune (es: 015001, 015002). Vuoto = tutti i comuni</string>
+       </property>
+      </widget>
+     </item>
      <item row="8" column="0">
       <widget class="QLabel" name="label_2">
        <property name="text">
