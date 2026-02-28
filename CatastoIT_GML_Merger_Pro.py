@@ -37,7 +37,7 @@ from zipfile import ZipFile
 from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator, QVariant, Qt, pyqtSignal
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QApplication, QListWidget
-from qgis.core import Qgis, QgsField, QgsMessageLog, QgsProject, QgsVectorLayer, QgsTask, QgsApplication
+from qgis.core import Qgis, QgsCoordinateReferenceSystem, QgsField, QgsMessageLog, QgsProject, QgsVectorLayer, QgsTask, QgsApplication
 import processing
 
 # -- Import moduli locali del progetto --
@@ -280,7 +280,17 @@ class CatastoIT_GML_Merger_Pro:
             
             log_message(f"Province selezionate: {inputs['province_code']}")
             print(f"Province selezionate: {inputs['province_code']}")
-            
+
+            # Filtro comuni: legge tutti gli item di list_comuni_selezionati
+            n = self.dlg.list_comuni_selezionati.count()
+            if n > 0:
+                comuni_list = [self.dlg.list_comuni_selezionati.item(i).data(Qt.UserRole) for i in range(n)]
+                comuni_nomi = [self.dlg.list_comuni_selezionati.item(i).text() for i in range(n)]
+                inputs['comuni_filter'] = comuni_list
+                log_message(f"Filtro comuni attivo ({n}): {', '.join(comuni_nomi)}")
+            else:
+                inputs['comuni_filter'] = []
+
             formats = {
                 'GPKG': '.gpkg'
             }
@@ -296,7 +306,16 @@ class CatastoIT_GML_Merger_Pro:
                 if not map_filename:
                     log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nome file di output MAP non specificato</span>")
                     return None
-                
+
+                # Valida i caratteri del nome file
+                invalid_chars = set('<>:"/\\|?*')
+                if any(c in map_filename for c in invalid_chars):
+                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nome file MAP contiene caratteri non validi</span>")
+                    return None
+                if len(map_filename) > 200:
+                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nome file MAP troppo lungo (max 200 caratteri)</span>")
+                    return None
+
                 # Aggiungi estensione se mancante
                 if not map_filename.endswith(formats[format_name]):
                     map_filename += formats[format_name]
@@ -312,7 +331,16 @@ class CatastoIT_GML_Merger_Pro:
                 if not ple_filename:
                     log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nome file di output PLE non specificato</span>")
                     return None
-                
+
+                # Valida i caratteri del nome file
+                invalid_chars = set('<>:"/\\|?*')
+                if any(c in ple_filename for c in invalid_chars):
+                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nome file PLE contiene caratteri non validi</span>")
+                    return None
+                if len(ple_filename) > 200:
+                    log_message("<span style='color:red;font-weight:bold;'>ERRORE: Nome file PLE troppo lungo (max 200 caratteri)</span>")
+                    return None
+
                 # Aggiungi estensione se mancante
                 if not ple_filename.endswith(formats[format_name]):
                     ple_filename += formats[format_name]
@@ -341,10 +369,6 @@ class CatastoIT_GML_Merger_Pro:
                 self.dlg.btn_stop.setEnabled(True)
                 self.dlg.btn_process.setEnabled(False)
                 
-                # Inizializza la progress bar
-                # self.dlg.progressBar.setValue(0)
-                # self.dlg.progressBar.setVisible(True)
-                
                 inputs = collect_inputs()
                 if not inputs:
                     log_message("Operazione annullata: verifica i parametri inseriti")
@@ -357,7 +381,6 @@ class CatastoIT_GML_Merger_Pro:
                 task = GmlProcessingTask('Elaborazione GML', inputs)
                 
                 # Connetti i segnali agli slot
-                # task.progress_changed.connect(self.update_progress)
                 task.log_message.connect(log_message)
                 task.task_completed.connect(self.on_task_completed)
                 
@@ -379,10 +402,6 @@ class CatastoIT_GML_Merger_Pro:
             dir_path = directory_temporanea
             
             try:
-                # Reset della progress bar
-                # self.dlg.progressBar.setValue(0)
-                # self.dlg.progressBar.setVisible(False)
-                
                 if dir_path and os.path.exists(dir_path):
                     log_message("Inizio pulizia directory temporanea...")
                     
@@ -470,6 +489,7 @@ class CatastoIT_GML_Merger_Pro:
             self.dlg.cb_format.setCurrentIndex(0)
             self.dlg.cb_region.setCurrentIndex(0)
             self.dlg.list_provinces.clearSelection()  # Cancella le selezioni dalla lista
+            self.dlg._reset_comuni_widget()
             self.dlg.cb_region.setEnabled(True)
             self.dlg.le_url.setEnabled(True)
             self.dlg.le_url.clear()
@@ -511,9 +531,9 @@ class CatastoIT_GML_Merger_Pro:
 
     def stop_processing(self):
         """Interrompe il processo di elaborazione in corso"""
-        if self.processing_active:
+        if self.processing_active and self.current_task:
             self.processing_active = False
-            # Utilizziamo la funzione log_message definita nel contesto di run()
+            self.current_task.cancel()
             self.dlg.text_log.append("\n<span style='color:red;font-weight:bold;'>Interruzione richiesta dall'utente...</span>")
             self.dlg.text_log.append("L'elaborazione verrà interrotta appena possibile")
             self.dlg.btn_stop.setEnabled(False)
@@ -538,6 +558,7 @@ class CatastoIT_GML_Merger_Pro:
                 self.dlg.le_temp_folder.setFilePath("")
                 self.dlg.le_map_output.setText("")
                 self.dlg.le_ple_output.setText("")
+                self.dlg._reset_comuni_widget()
                 self.dlg.cb_file_type.setCurrentIndex(0)
                 self.dlg.cb_format.setCurrentIndex(0)
                 self.dlg.cb_region.setCurrentIndex(0)
@@ -548,10 +569,6 @@ class CatastoIT_GML_Merger_Pro:
         # Non chiudere automaticamente il dialog per evitare crash
         # L'utente può chiuderlo manualmente se necessario
 
-    # def update_progress(self, value):
-        # """Aggiorna la barra di progresso"""
-        # self.dlg.progressBar.setValue(value)
-    
     def on_task_completed(self, success, result):
         """Gestisce il completamento del task"""
         global directory_temporanea
@@ -594,9 +611,7 @@ class CatastoIT_GML_Merger_Pro:
                         self.dlg.text_log.append(f"Layer PLE '{base_name}' caricato in QGIS")
                     else:
                         self.dlg.text_log.append(f"ERRORE: Impossibile caricare il layer PLE '{base_name}'")
-                
-                # self.dlg.text_log.append("<span style='color:#FF8C00;font-weight:bold;'>ATTENZIONE: I file temporanei saranno ELIMINATI dopo la conclusione del processo premendo 'Pulisci'!</span>")
-            
+
             # Mostra i tempi di elaborazione
             if result.get('processing_times'):
                 self.dlg.text_log.append("\nTempi di elaborazione:")
@@ -609,9 +624,12 @@ class CatastoIT_GML_Merger_Pro:
                 self.dlg.text_log.append(f"\nDirectory temporanea: {directory_temporanea}")
                 self.dlg.text_log.append("Usa il pulsante 'Pulisci' per eliminare i file temporanei")
         else:
-            self.dlg.text_log.append("\n<span style='color:red;font-weight:bold;'>Elaborazione non completata</span>")
-            if result.get('exception'):
-                self.dlg.text_log.append(f"Errore: {str(result.get('exception'))}")
+            if result.get('cancelled'):
+                self.dlg.text_log.append("\n<span style='color:orange;font-weight:bold;'>Elaborazione annullata dall'utente</span>")
+            else:
+                self.dlg.text_log.append("\n<span style='color:red;font-weight:bold;'>Elaborazione non completata</span>")
+                if result.get('exception'):
+                    self.dlg.text_log.append(f"Errore: {str(result.get('exception'))}")
         
         # Aggiorna titolo finestra
         self.dlg.setWindowTitle("Catasto IT GML Merger PRO - Elaborazione completata")
@@ -623,7 +641,6 @@ class GmlProcessingTask(QgsTask):
     """Task per l'elaborazione dei file GML in background"""
     
     # Definizione dei segnali per comunicare con l'interfaccia
-    progress_changed = pyqtSignal(int)
     log_message = pyqtSignal(str)
     task_completed = pyqtSignal(bool, object)
     
@@ -666,7 +683,9 @@ class GmlProcessingTask(QgsTask):
             self.setProgress(5)  # 5% dopo inizializzazione
             
             main_zip_path = os.path.join(temp_dir, "downloaded.zip")
-            urllib.request.urlretrieve(self.inputs["url"], main_zip_path)
+            with urllib.request.urlopen(self.inputs["url"], timeout=120) as response:
+                with open(main_zip_path, 'wb') as out_file:
+                    shutil.copyfileobj(response, out_file)
             
             self.setProgress(15)  # 15% dopo download
 
@@ -687,6 +706,21 @@ class GmlProcessingTask(QgsTask):
                 ext = os.path.splitext(self.inputs["ple_output"])[1]
                 self.inputs["ple_output"] = f"{base_name}_{province_suffix}{ext}"
                 self.log_message.emit(f"Output PLE aggiornato: {self.inputs['ple_output']}")
+
+            # Aggiunge suffisso con codici Belfiore se il filtro comuni è attivo
+            comuni_filter = self.inputs.get('comuni_filter', [])
+            if comuni_filter:
+                comuni_suffix = "_".join(comuni_filter)
+                if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
+                    base_name = os.path.splitext(self.inputs["map_output"])[0]
+                    ext = os.path.splitext(self.inputs["map_output"])[1]
+                    self.inputs["map_output"] = f"{base_name}_{comuni_suffix}{ext}"
+                    self.log_message.emit(f"Output MAP con filtro comuni: {self.inputs['map_output']}")
+                if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
+                    base_name = os.path.splitext(self.inputs["ple_output"])[0]
+                    ext = os.path.splitext(self.inputs["ple_output"])[1]
+                    self.inputs["ple_output"] = f"{base_name}_{comuni_suffix}{ext}"
+                    self.log_message.emit(f"Output PLE con filtro comuni: {self.inputs['ple_output']}")
 
             # Contatori per i file
             ple_count = map_count = 0
@@ -740,19 +774,35 @@ class GmlProcessingTask(QgsTask):
                         
                         with ZipFile(prov_zip_data) as prov_zip:
                             comuni_zips = [f for f in prov_zip.namelist() if f.endswith('.zip')]
-                            
+
                             # Calcola il totale dei comuni per la barra di progresso
                             total_comuni = len(comuni_zips)
                             processed_comuni = 0
-                            
+
+                            # Log diagnostico: mostra i primi nomi dei ZIP trovati nella provincia
+                            if comuni_zips:
+                                sample = [os.path.basename(f) for f in comuni_zips[:5]]
+                                self.log_message.emit(f"ZIP comuni trovati (primi {len(sample)}): {', '.join(sample)}")
+                            else:
+                                self.log_message.emit("Nessun ZIP comune trovato nella provincia (struttura diversa?)")
+
                             for com_zip_path in comuni_zips:
                                 if self.isCanceled():
                                     self.log_message.emit("Elaborazione interrotta dall'utente")
                                     return False
-                                
+
                                 com_name = os.path.basename(com_zip_path)
+
+                                # Filtro per codice Belfiore comune (opzionale)
+                                # com_name es: "A070_AGIRA.zip" → codice = "A070"
+                                comuni_filter = self.inputs.get('comuni_filter', [])
+                                if comuni_filter:
+                                    com_belfiore = os.path.splitext(com_name)[0].split('_')[0].upper()
+                                    if com_belfiore not in comuni_filter:
+                                        continue
+
                                 processed_comuni += 1
-                                
+
                                 # Calcola progresso per i comuni all'interno della provincia
                                 comuni_progress = prov_progress + (processed_comuni / total_comuni) * (prov_progress_range / total_provinces)
                                 if processed_comuni % 10 == 0 or processed_comuni == total_comuni:
@@ -798,7 +848,10 @@ class GmlProcessingTask(QgsTask):
                                                 
                                                 # Aggiungi al set per evitare duplicati
                                                 extracted_files.add(file_name)
-            
+
+                        del prov_zip_data
+                        gc.collect()
+
             self.log_message.emit(f"\nFile estratti: {ple_count} PLE, {map_count} MAP")
             self.setProgress(50)  # 50% dopo estrazione
             
@@ -966,21 +1019,15 @@ class GmlProcessingTask(QgsTask):
                 gc.collect()
                 time.sleep(0.5)
 
-                merge_params = {
-                    "LAYERS": source_files,
-                    "CRS": None,
-                    "OUTPUT": temp_merge,
-                }
-
                 self.log_message.emit(f"Unione file {file_type}...")
                 self.log_message.emit(f"File temporaneo merge: {temp_merge}")
                 self.log_message.emit(f"Numero file da unire: {len(source_files)}")
-                
+
                 # Verifica che il percorso del file temporaneo sia valido
                 if not os.access(os.path.dirname(temp_merge), os.W_OK):
                     self.log_message.emit(f"ERRORE: Directory temporanea non scrivibile: {os.path.dirname(temp_merge)}")
                     return None
-                
+
                 # Verifica che i file sorgente esistano e siano leggibili
                 valid_source_files = []
                 for sf in source_files:
@@ -988,14 +1035,19 @@ class GmlProcessingTask(QgsTask):
                         valid_source_files.append(sf)
                     else:
                         self.log_message.emit(f"ATTENZIONE: File sorgente non accessibile: {sf}")
-                
+
                 if not valid_source_files:
                     self.log_message.emit("ERRORE: Nessun file sorgente valido trovato")
                     return None
-                
+
                 if len(valid_source_files) != len(source_files):
                     self.log_message.emit(f"Procedo con {len(valid_source_files)} file validi su {len(source_files)} totali")
-                    merge_params["LAYERS"] = valid_source_files
+
+                merge_params = {
+                    "LAYERS": valid_source_files,
+                    "CRS": QgsCoordinateReferenceSystem('EPSG:6706'),
+                    "OUTPUT": temp_merge,
+                }
                 
                 try:
                     processing.run("native:mergevectorlayers", merge_params)
@@ -1092,13 +1144,13 @@ class GmlProcessingTask(QgsTask):
                                 particella = gml_id[39:]
                                 changes_buffer[feature_id][particella_idx] = particella
                             
-                            # Estrai sezione censuaria per PLE (carattere in posizione 32)
+                            # Estrai sezione censuaria per PLE (indice Python 31, 1 carattere prima del foglio)
                             if needs_sez_censuaria and len(gml_id) > 32:
                                 sez_censuaria = gml_id[31:32]
                                 changes_buffer[feature_id][sez_censuaria_idx] = sez_censuaria
                     
                     # Applica tutte le modifiche in batch
-                    batch_size = 5000  # Dimensione del batch per evitare operazioni troppo grandi
+                    batch_size = 500  # Controlla annullamento ogni 500 feature
                     batch_count = 0
                     for feature_id, attrs in changes_buffer.items():
                         for field_idx, value in attrs.items():
@@ -1161,7 +1213,10 @@ class GmlProcessingTask(QgsTask):
         
     def finished(self, result):
         """Viene chiamato quando il task è completato"""
-        self.task_completed.emit(result, self.result)
+        if self.isCanceled():
+            self.task_completed.emit(False, {'cancelled': True})
+        else:
+            self.task_completed.emit(result, self.result)
 
     def reproject_layer(self, input_file, target_crs, file_type):
         """Riproietta un layer vettoriale nel CRS specificato"""
@@ -1232,9 +1287,9 @@ class GmlProcessingTask(QgsTask):
                 # Prova a unire questo batch con parametri migliorati per evitare conflitti FID
                 batch_params = {
                     "LAYERS": batch,
-                    "CRS": None,
+                    "CRS": QgsCoordinateReferenceSystem('EPSG:6706'),
                     "OUTPUT": batch_output,
-                    "SEPARATE_LAYERS": False,  # Unisce tutto in un singolo layer
+                    "SEPARATE_LAYERS": False,
                 }
                 
                 try:
@@ -1276,7 +1331,7 @@ class GmlProcessingTask(QgsTask):
                 # Unisci i file temporanei
                 final_merge_params = {
                     "LAYERS": temp_files,
-                    "CRS": None,
+                    "CRS": QgsCoordinateReferenceSystem('EPSG:6706'),
                     "OUTPUT": output_path,
                 }
                 
@@ -1305,35 +1360,42 @@ class GmlProcessingTask(QgsTask):
 
     def merge_with_gdal(self, source_files, output_path, file_type):
         """Merge files using GDAL/OGR directly to avoid FID conflicts"""
+        first_source = None
+        output_ds = None
         try:
-            from osgeo import ogr, gdal
-            
+            from osgeo import ogr, osr, gdal
+
             # Rimuovi il file di output se esiste
             if os.path.exists(output_path):
                 os.remove(output_path)
-            
+
             # Apri il primo file per ottenere la struttura
             first_source = ogr.Open(source_files[0])
             if not first_source:
                 self.log_message.emit(f"Impossibile aprire il primo file: {source_files[0]}")
                 return False
-            
+
             first_layer = first_source.GetLayer(0)
             if not first_layer:
                 self.log_message.emit("Impossibile ottenere il layer dal primo file")
                 return False
-                
+
             # Crea il file di output
             driver = ogr.GetDriverByName("GPKG")
             output_ds = driver.CreateDataSource(output_path)
             if not output_ds:
                 self.log_message.emit(f"Impossibile creare il file di output: {output_path}")
                 return False
-            
+
             # Crea il layer di output con geometria generica per evitare conflitti POLYGON/MULTIPOLYGON
             geom_type = ogr.wkbUnknown  # Permette qualsiasi tipo di geometria
-            output_layer = output_ds.CreateLayer("merged_layer", first_layer.GetSpatialRef(), geom_type)
-            
+            srs = first_layer.GetSpatialRef()
+            if srs is None:
+                # Fallback: se il GML non espone la CRS, usa EPSG:6706 (RDN2008 nativo dei dati AE)
+                srs = osr.SpatialReference()
+                srs.ImportFromEPSG(6706)
+            output_layer = output_ds.CreateLayer("merged_layer", srs, geom_type)
+
             # Copia la definizione dei campi dal primo layer
             layer_defn = first_layer.GetLayerDefn()
             for i in range(layer_defn.GetFieldCount()):
@@ -1342,61 +1404,64 @@ class GmlProcessingTask(QgsTask):
                 if field_defn.GetType() == ogr.OFTString:
                     field_defn.SetWidth(254)  # Lunghezza massima per string field
                 output_layer.CreateField(field_defn)
-            
+
             first_source = None  # Chiudi il primo file
-            
+
             # Processa tutti i file
             feature_count = 0
             for i, source_file in enumerate(source_files):
                 if self.isCanceled():
                     return False
-                    
+
                 self.log_message.emit(f"Processando file {i+1}/{len(source_files)}: {os.path.basename(source_file)}")
-                
-                source_ds = ogr.Open(source_file)
-                if not source_ds:
-                    self.log_message.emit(f"Impossibile aprire file: {source_file}")
-                    continue
-                
-                source_layer = source_ds.GetLayer(0)
-                if not source_layer:
-                    self.log_message.emit(f"Impossibile ottenere layer da: {source_file}")
-                    continue
-                
-                # Copia tutte le feature dal layer sorgente
-                for feature in source_layer:
-                    if self.isCanceled():
-                        return False
-                    
-                    # Crea una nuova feature per il layer di output
-                    new_feature = ogr.Feature(output_layer.GetLayerDefn())
-                    
-                    # Copia tutti i campi
-                    for field_idx in range(feature.GetFieldCount()):
-                        field_name = feature.GetFieldDefnRef(field_idx).GetName()
-                        if output_layer.GetLayerDefn().GetFieldIndex(field_name) != -1:
-                            new_feature.SetField(field_name, feature.GetField(field_idx))
-                    
-                    # Copia la geometria
-                    geom = feature.GetGeometryRef()
-                    if geom:
-                        new_feature.SetGeometry(geom.Clone())
-                    
-                    # Aggiungi la feature al layer di output (il FID verrà assegnato automaticamente)
-                    if output_layer.CreateFeature(new_feature) != ogr.OGRERR_NONE:
-                        self.log_message.emit(f"Errore nell'aggiunta di una feature dal file: {source_file}")
-                    else:
-                        feature_count += 1
-                    
-                    new_feature = None  # Cleanup
-                
-                source_ds = None  # Chiudi il file sorgente
-                
-            output_ds = None  # Chiudi il file di output
-            
+
+                source_ds = None
+                try:
+                    source_ds = ogr.Open(source_file)
+                    if not source_ds:
+                        self.log_message.emit(f"Impossibile aprire file: {source_file}")
+                        continue
+
+                    source_layer = source_ds.GetLayer(0)
+                    if not source_layer:
+                        self.log_message.emit(f"Impossibile ottenere layer da: {source_file}")
+                        continue
+
+                    # Copia tutte le feature dal layer sorgente
+                    for feature in source_layer:
+                        if self.isCanceled():
+                            return False
+
+                        # Crea una nuova feature per il layer di output
+                        new_feature = ogr.Feature(output_layer.GetLayerDefn())
+
+                        # Copia tutti i campi
+                        for field_idx in range(feature.GetFieldCount()):
+                            field_name = feature.GetFieldDefnRef(field_idx).GetName()
+                            if output_layer.GetLayerDefn().GetFieldIndex(field_name) != -1:
+                                new_feature.SetField(field_name, feature.GetField(field_idx))
+
+                        # Copia la geometria
+                        geom = feature.GetGeometryRef()
+                        if geom:
+                            new_feature.SetGeometry(geom.Clone())
+
+                        # Aggiungi la feature al layer di output (il FID verrà assegnato automaticamente)
+                        if output_layer.CreateFeature(new_feature) != ogr.OGRERR_NONE:
+                            self.log_message.emit(f"Errore nell'aggiunta di una feature dal file: {source_file}")
+                        else:
+                            feature_count += 1
+
+                        new_feature = None  # Cleanup
+                finally:
+                    source_ds = None  # Garantisce la chiusura del file sorgente anche in caso di errore
+
             self.log_message.emit(f"GDAL merge completato: {feature_count} features unite")
             return True
-            
+
         except Exception as e:
             self.log_message.emit(f"ERRORE nel merge GDAL: {str(e)}")
             return False
+        finally:
+            first_source = None  # Garantisce la chiusura del primo file
+            output_ds = None  # Garantisce la chiusura del file di output
