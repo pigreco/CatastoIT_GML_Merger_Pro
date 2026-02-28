@@ -779,11 +779,18 @@ class GmlProcessingTask(QgsTask):
                         
                         with ZipFile(prov_zip_data) as prov_zip:
                             comuni_zips = [f for f in prov_zip.namelist() if f.endswith('.zip')]
-                            
+
                             # Calcola il totale dei comuni per la barra di progresso
                             total_comuni = len(comuni_zips)
                             processed_comuni = 0
-                            
+
+                            # Log diagnostico: mostra i primi nomi dei ZIP trovati nella provincia
+                            if comuni_zips:
+                                sample = [os.path.basename(f) for f in comuni_zips[:5]]
+                                self.log_message.emit(f"ZIP comuni trovati (primi {len(sample)}): {', '.join(sample)}")
+                            else:
+                                self.log_message.emit("Nessun ZIP comune trovato nella provincia (struttura diversa?)")
+
                             for com_zip_path in comuni_zips:
                                 if self.isCanceled():
                                     self.log_message.emit("Elaborazione interrotta dall'utente")
