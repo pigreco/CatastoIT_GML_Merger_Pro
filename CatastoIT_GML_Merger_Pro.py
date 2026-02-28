@@ -281,13 +281,13 @@ class CatastoIT_GML_Merger_Pro:
             log_message(f"Province selezionate: {inputs['province_code']}")
             print(f"Province selezionate: {inputs['province_code']}")
 
-            # Filtro comuni: legge i codici Belfiore dagli item selezionati in list_comuni
-            selected_comuni = self.dlg.list_comuni.selectedItems()
-            if selected_comuni:
-                comuni_list = [item.data(Qt.UserRole) for item in selected_comuni]
-                comuni_nomi = [item.text() for item in selected_comuni]
+            # Filtro comuni: legge tutti gli item di list_comuni_selezionati
+            n = self.dlg.list_comuni_selezionati.count()
+            if n > 0:
+                comuni_list = [self.dlg.list_comuni_selezionati.item(i).data(Qt.UserRole) for i in range(n)]
+                comuni_nomi = [self.dlg.list_comuni_selezionati.item(i).text() for i in range(n)]
                 inputs['comuni_filter'] = comuni_list
-                log_message(f"Filtro comuni attivo: {', '.join(comuni_nomi)}")
+                log_message(f"Filtro comuni attivo ({n}): {', '.join(comuni_nomi)}")
             else:
                 inputs['comuni_filter'] = []
 
@@ -489,7 +489,7 @@ class CatastoIT_GML_Merger_Pro:
             self.dlg.cb_format.setCurrentIndex(0)
             self.dlg.cb_region.setCurrentIndex(0)
             self.dlg.list_provinces.clearSelection()  # Cancella le selezioni dalla lista
-            self.dlg.list_comuni.clearSelection()
+            self.dlg._reset_comuni_widget()
             self.dlg.cb_region.setEnabled(True)
             self.dlg.le_url.setEnabled(True)
             self.dlg.le_url.clear()
@@ -558,7 +558,7 @@ class CatastoIT_GML_Merger_Pro:
                 self.dlg.le_temp_folder.setFilePath("")
                 self.dlg.le_map_output.setText("")
                 self.dlg.le_ple_output.setText("")
-                self.dlg.list_comuni.clearSelection()
+                self.dlg._reset_comuni_widget()
                 self.dlg.cb_file_type.setCurrentIndex(0)
                 self.dlg.cb_format.setCurrentIndex(0)
                 self.dlg.cb_region.setCurrentIndex(0)
