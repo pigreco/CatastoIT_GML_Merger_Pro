@@ -1017,21 +1017,15 @@ class GmlProcessingTask(QgsTask):
                 gc.collect()
                 time.sleep(0.5)
 
-                merge_params = {
-                    "LAYERS": source_files,
-                    "CRS": None,
-                    "OUTPUT": temp_merge,
-                }
-
                 self.log_message.emit(f"Unione file {file_type}...")
                 self.log_message.emit(f"File temporaneo merge: {temp_merge}")
                 self.log_message.emit(f"Numero file da unire: {len(source_files)}")
-                
+
                 # Verifica che il percorso del file temporaneo sia valido
                 if not os.access(os.path.dirname(temp_merge), os.W_OK):
                     self.log_message.emit(f"ERRORE: Directory temporanea non scrivibile: {os.path.dirname(temp_merge)}")
                     return None
-                
+
                 # Verifica che i file sorgente esistano e siano leggibili
                 valid_source_files = []
                 for sf in source_files:
@@ -1039,14 +1033,19 @@ class GmlProcessingTask(QgsTask):
                         valid_source_files.append(sf)
                     else:
                         self.log_message.emit(f"ATTENZIONE: File sorgente non accessibile: {sf}")
-                
+
                 if not valid_source_files:
                     self.log_message.emit("ERRORE: Nessun file sorgente valido trovato")
                     return None
-                
+
                 if len(valid_source_files) != len(source_files):
                     self.log_message.emit(f"Procedo con {len(valid_source_files)} file validi su {len(source_files)} totali")
-                    merge_params["LAYERS"] = valid_source_files
+
+                merge_params = {
+                    "LAYERS": valid_source_files,
+                    "CRS": QgsCoordinateReferenceSystem('EPSG:6706'),
+                    "OUTPUT": temp_merge,
+                }
                 
                 try:
                     processing.run("native:mergevectorlayers", merge_params)
@@ -1286,9 +1285,9 @@ class GmlProcessingTask(QgsTask):
                 # Prova a unire questo batch con parametri migliorati per evitare conflitti FID
                 batch_params = {
                     "LAYERS": batch,
-                    "CRS": None,
+                    "CRS": QgsCoordinateReferenceSystem('EPSG:6706'),
                     "OUTPUT": batch_output,
-                    "SEPARATE_LAYERS": False,  # Unisce tutto in un singolo layer
+                    "SEPARATE_LAYERS": False,
                 }
                 
                 try:
@@ -1330,7 +1329,7 @@ class GmlProcessingTask(QgsTask):
                 # Unisci i file temporanei
                 final_merge_params = {
                     "LAYERS": temp_files,
-                    "CRS": None,
+                    "CRS": QgsCoordinateReferenceSystem('EPSG:6706'),
                     "OUTPUT": output_path,
                 }
                 
@@ -1362,7 +1361,7 @@ class GmlProcessingTask(QgsTask):
         first_source = None
         output_ds = None
         try:
-            from osgeo import ogr, gdal
+            from osgeo import ogr, osr, gdal
 
             # Rimuovi il file di output se esiste
             if os.path.exists(output_path):
@@ -1388,7 +1387,12 @@ class GmlProcessingTask(QgsTask):
 
             # Crea il layer di output con geometria generica per evitare conflitti POLYGON/MULTIPOLYGON
             geom_type = ogr.wkbUnknown  # Permette qualsiasi tipo di geometria
-            output_layer = output_ds.CreateLayer("merged_layer", first_layer.GetSpatialRef(), geom_type)
+            srs = first_layer.GetSpatialRef()
+            if srs is None:
+                # Fallback: se il GML non espone la CRS, usa EPSG:6706 (RDN2008 nativo dei dati AE)
+                srs = osr.SpatialReference()
+                srs.ImportFromEPSG(6706)
+            output_layer = output_ds.CreateLayer("merged_layer", srs, geom_type)
 
             # Copia la definizione dei campi dal primo layer
             layer_defn = first_layer.GetLayerDefn()
