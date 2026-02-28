@@ -1,0 +1,10 @@
+# Claude Code
+.claude/
+
+# Credenziali
+.env
+
+# File temporanei
+_state_
+*.pyc
+__pycache__/
