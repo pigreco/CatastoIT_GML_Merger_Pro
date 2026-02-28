@@ -64,7 +64,11 @@
     .page { max-width: 940px; margin: 0 auto; padding: 32px 24px 64px; }
 
     /* ── SECTION ── */
-    section { margin-bottom: 52px; }
+    /* scroll-margin-top compensa header (~78px) + nav (~42px) + margine */
+    section {
+      margin-bottom: 52px;
+      scroll-margin-top: 130px;
+    }
     section h2 {
       font-size: 1.25rem;
       color: var(--green);
@@ -184,6 +188,35 @@
       color: var(--green2);
       font-weight: 600;
     }
+
+    /* ── TORNA SU ── */
+    #btn-top {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      font-size: 1.3rem;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(0,0,0,.3);
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity .3s, transform .3s;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+    }
+    #btn-top.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #btn-top:hover { background: var(--green2); }
 
     /* ── FOOTER ── */
     footer {
@@ -645,6 +678,20 @@
     <a href="https://github.com/pigreco/CatastoIT_GML_Merger_Pro">github.com/pigreco/CatastoIT_GML_Merger_Pro</a>
   </p>
 </footer>
+
+<!-- Torna su -->
+<a href="#" id="btn-top" title="Torna su">&#8679;</a>
+
+<script>
+  const btnTop = document.getElementById('btn-top');
+  window.addEventListener('scroll', () => {
+    btnTop.classList.toggle('visible', window.scrollY > 300);
+  });
+  btnTop.addEventListener('click', e => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+</script>
 
 </body>
 </html>
