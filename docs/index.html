@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CatastoIT GML Merger Pro – Guida</title>
+  <style>
+    :root {
+      --green:  #3d8640;
+      --green2: #2e6630;
+      --amber:  #b98458;
+      --bg:     #f8f9fa;
+      --card:   #ffffff;
+      --border: #dee2e6;
+      --text:   #212529;
+      --muted:  #6c757d;
+      --code-bg:#e9ecef;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    /* ── TOP BAR ── */
+    header {
+      background: var(--green);
+      color: #fff;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    header img { height: 42px; border-radius: 6px; }
+    header h1  { font-size: 1.4rem; font-weight: 700; letter-spacing: .5px; }
+    header small { font-size: .8rem; opacity: .85; }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--green2);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 6px 28px;
+    }
+    nav a {
+      color: #d4edda;
+      text-decoration: none;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: .85rem;
+      transition: background .2s;
+    }
+    nav a:hover { background: rgba(255,255,255,.18); color: #fff; }
+
+    /* ── LAYOUT ── */
+    .page { max-width: 940px; margin: 0 auto; padding: 32px 24px 64px; }
+
+    /* ── SECTION ── */
+    section { margin-bottom: 52px; }
+    section h2 {
+      font-size: 1.25rem;
+      color: var(--green);
+      border-bottom: 2px solid var(--green);
+      padding-bottom: 6px;
+      margin-bottom: 20px;
+    }
+    section h3 {
+      font-size: 1.05rem;
+      color: var(--green2);
+      margin: 20px 0 8px;
+    }
+    p  { margin-bottom: 12px; }
+    ul, ol { margin: 8px 0 12px 22px; }
+    li { margin-bottom: 6px; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .card h3 { margin-top: 0; }
+
+    /* ── BADGE / PILL ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 700;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+    .badge-green  { background: #d4edda; color: var(--green2); }
+    .badge-blue   { background: #cce5ff; color: #004085; }
+    .badge-amber  { background: #fff3cd; color: #856404; }
+    .badge-red    { background: #f8d7da; color: #721c24; }
+
+    /* ── TABLE ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+      margin: 12px 0;
+    }
+    th {
+      background: var(--green);
+      color: #fff;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    td { padding: 7px 12px; border-bottom: 1px solid var(--border); }
+    tr:nth-child(even) td { background: #f3f8f3; }
+
+    /* ── CODE ── */
+    code {
+      background: var(--code-bg);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: Consolas, monospace;
+      font-size: .88em;
+    }
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      border-radius: 8px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      font-size: .85rem;
+      margin: 12px 0;
+    }
+
+    /* ── STEPS ── */
+    .steps { counter-reset: step; padding: 0; list-style: none; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 14px;
+      margin-bottom: 16px;
+      align-items: flex-start;
+    }
+    .steps li::before {
+      content: counter(step);
+      min-width: 28px; height: 28px;
+      background: var(--green);
+      color: #fff;
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: .85rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* ── ALERT ── */
+    .alert {
+      border-left: 4px solid var(--amber);
+      background: #fff8f0;
+      padding: 12px 16px;
+      border-radius: 0 6px 6px 0;
+      margin: 14px 0;
+    }
+    .alert.info { border-color: #4a9eff; background: #f0f7ff; }
+    .alert.ok   { border-color: var(--green); background: #f0fff3; }
+
+    /* ── FIELD LIST ── */
+    .field-tag {
+      font-family: Consolas, monospace;
+      background: var(--code-bg);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: .88em;
+      color: var(--green2);
+      font-weight: 600;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: .82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--green); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="https://raw.githubusercontent.com/pigreco/CatastoIT_GML_Merger_Pro/main/img/icon_b.png" alt="icon">
+  <div>
+    <h1>CatastoIT GML Merger Pro</h1>
+    <small>Plugin QGIS per il download e la fusione di dati catastali italiani</small>
+  </div>
+</header>
+
+<nav>
+  <a href="#intro">Introduzione</a>
+  <a href="#install">Installazione</a>
+  <a href="#workflow">Flusso di lavoro</a>
+  <a href="#interfaccia">Interfaccia</a>
+  <a href="#tipi-file">Tipi di file</a>
+  <a href="#campi">Campi calcolati</a>
+  <a href="#filtro-comuni">Filtro Comuni</a>
+  <a href="#output">Output</a>
+  <a href="#note">Note tecniche</a>
+  <a href="#faq">FAQ</a>
+  <a href="#crediti">Crediti</a>
+</nav>
+
+<div class="page">
+
+  <!-- ═══════════════════════════════════════════════════ INTRO -->
+  <section id="intro">
+    <h2>Introduzione</h2>
+    <p>
+      <strong>CatastoIT GML Merger Pro</strong> è un plugin per <strong>QGIS 3.22+</strong>
+      che consente di scaricare, estrarre e unire automaticamente i dati catastali vettoriali
+      italiani pubblicati dall'<strong>Agenzia delle Entrate (AdE)</strong> tramite il
+      <a href="https://geodati.gov.it" target="_blank">RNDT (Repertorio Nazionale Dati Territoriali)</a>.
+    </p>
+    <p>
+      Con pochi clic è possibile ottenere layer pronti in QGIS per province e comuni
+      selezionati, con campi aggiuntivi calcolati automaticamente (foglio, particella,
+      sezione censuaria, nome comune).
+    </p>
+    <div class="alert ok">
+      I dati catastali vettoriali sono in formato <strong>GML (Geography Markup Language)</strong>
+      e vengono automaticamente convertiti in <strong>GeoPackage (.gpkg)</strong>,
+      formato nativo di QGIS ad alte prestazioni.
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ INSTALLAZIONE -->
+  <section id="install">
+    <h2>Installazione</h2>
+    <div class="card">
+      <h3>Da QGIS Plugin Manager <span class="badge badge-green">Consigliato</span></h3>
+      <ol class="steps" style="list-style:none;padding:0;">
+        <li>Aprire QGIS e andare su <strong>Plugin → Gestisci e installa plugin</strong></li>
+        <li>Cercare <code>CatastoIT GML Merger Pro</code></li>
+        <li>Cliccare <strong>Installa plugin</strong></li>
+        <li>Il plugin appare nella barra degli strumenti di QGIS</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Installazione manuale</h3>
+      <ol class="steps" style="list-style:none;padding:0;">
+        <li>Scaricare il file <code>.zip</code> dalla
+          <a href="https://github.com/pigreco/CatastoIT_GML_Merger_Pro/releases" target="_blank">pagina Release</a></li>
+        <li>In QGIS: <strong>Plugin → Gestisci e installa plugin → Installa da ZIP</strong></li>
+        <li>Selezionare il file scaricato e installare</li>
+        <li>Riavviare QGIS se richiesto</li>
+      </ol>
+    </div>
+    <h3>Requisiti</h3>
+    <table>
+      <tr><th>Componente</th><th>Versione minima</th></tr>
+      <tr><td>QGIS</td><td>3.22+</td></tr>
+      <tr><td>Python</td><td>3.7+</td></tr>
+      <tr><td>GDAL/OGR</td><td>incluso in QGIS</td></tr>
+      <tr><td>Connessione internet</td><td>richiesta per il download</td></tr>
+    </table>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ WORKFLOW -->
+  <section id="workflow">
+    <h2>Flusso di lavoro</h2>
+    <ol class="steps">
+      <li>
+        <div>
+          <strong>Scegli Regione e Province</strong><br>
+          Seleziona la regione italiana dal menù a tendina. Scegli una o più province
+          dall'elenco (CTRL+clic per selezione multipla).
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Filtro Comuni [Opzionale]</strong><br>
+          Se vuoi elaborare solo alcuni comuni della provincia, cerca e sposta i comuni
+          nel pannello di destra tramite doppio clic o il tasto →.
+          Se lasci vuoto il pannello, verranno elaborati tutti i comuni della provincia.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Tipo di file</strong><br>
+          Scegli se scaricare Mappe (MAP), Particelle (PLE) o Entrambi.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Opzioni campi aggiuntivi</strong><br>
+          Attiva/disattiva i checkbox:
+          <em>Aggiungi Sezione Censuaria</em> (solo PLE) e
+          <em>Aggiungi Nome Comune</em> (valido per MAP e PLE).
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Cartella di destinazione</strong><br>
+          Seleziona dove salvare i file GeoPackage prodotti.
+          Opzionalmente specifica una cartella temporanea su disco con spazio sufficiente.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Nome file output</strong><br>
+          Inserisci il nome del file di output (senza estensione).
+          L'estensione <code>.gpkg</code> viene aggiunta automaticamente.
+          Se hai applicato un filtro per comuni, il nome viene arricchito
+          con i codici Belfiore selezionati.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Riproiezione [Opzionale]</strong><br>
+          Il CRS nativo dei dati AdE è <code>EPSG:6706</code> (RDN2008 Geographic 2D).
+          Se il tuo progetto usa un sistema diverso (es. <code>EPSG:32633</code> UTM33N),
+          selezionalo qui per ottenere il file già riproiettato.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Elabora</strong><br>
+          Clicca il pulsante verde <strong>Elabora</strong>. Il processo gira in background;
+          il log in basso mostra lo stato in tempo reale. Al termine, se hai attivato
+          <em>Carica layer in QGIS</em>, i layer vengono aggiunti automaticamente al progetto.
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ INTERFACCIA -->
+  <section id="interfaccia">
+    <h2>Interfaccia</h2>
+    <img src="https://raw.githubusercontent.com/pigreco/CatastoIT_GML_Merger_Pro/main/img/gui.png"
+         alt="Interfaccia del plugin" style="width:100%;border-radius:8px;border:1px solid var(--border);margin-bottom:16px;">
+    <table>
+      <tr><th>Elemento</th><th>Descrizione</th></tr>
+      <tr><td><strong>Scegli Regione</strong></td><td>Seleziona la regione italiana da cui scaricare i dati</td></tr>
+      <tr><td><strong>Province</strong></td><td>Selezione multipla province (CTRL+clic)</td></tr>
+      <tr><td><strong>Filtro Comuni [Opzionale]</strong></td><td>Transfer widget per selezionare i singoli comuni</td></tr>
+      <tr><td><strong>Tipo File</strong></td><td>MAP, PLE o Entrambi</td></tr>
+      <tr><td><strong>Aggiungi Sezione Censuaria</strong></td><td>Checkbox – aggiunge il campo <code>sez_censuaria</code> solo nelle PLE</td></tr>
+      <tr><td><strong>Aggiungi Nome Comune</strong></td><td>Checkbox – aggiunge il campo <code>comune</code> per MAP e PLE</td></tr>
+      <tr><td><strong>URL (Download)</strong></td><td>URL generato automaticamente dal plugin – non modificare</td></tr>
+      <tr><td><strong>Cartella destinazione</strong></td><td>Dove salvare i GeoPackage finali</td></tr>
+      <tr><td><strong>Cartella temporanea</strong></td><td>Cartella per file intermedi (opzionale, usa temp di sistema se vuota)</td></tr>
+      <tr><td><strong>Formato Output</strong></td><td>Solo GeoPackage (.gpkg)</td></tr>
+      <tr><td><strong>Nome File MAPPE / PARTICELLE</strong></td><td>Nome del file di output senza estensione</td></tr>
+      <tr><td><strong>Riproietta</strong></td><td>CRS di destinazione opzionale (default EPSG:6706)</td></tr>
+      <tr><td><strong>Carica layer in QGIS</strong></td><td>Aggiunge i layer al progetto al termine</td></tr>
+      <tr><td><strong>Elabora</strong></td><td>Avvia il processo in background</td></tr>
+      <tr><td><strong>STOP!</strong></td><td>Interrompe l'elaborazione in corso</td></tr>
+    </table>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ TIPI FILE -->
+  <section id="tipi-file">
+    <h2>Tipi di file</h2>
+    <div class="card">
+      <h3>MAP – Mappe catastali <span class="badge badge-blue">Vettoriale Poligoni</span></h3>
+      <p>
+        Contiene i <strong>fogli di mappa</strong> catastale (particelle grafiche).
+        Ogni feature corrisponde a un'unità cartografica catastale delimitata dai confini
+        del foglio di mappa. Il campo calcolato <span class="field-tag">foglio</span>
+        viene estratto automaticamente dal <code>gml_id</code>.
+      </p>
+    </div>
+    <div class="card">
+      <h3>PLE – Particelle <span class="badge badge-green">Vettoriale Poligoni</span></h3>
+      <p>
+        Contiene le <strong>particelle catastali</strong> (unità immobiliari fondiarie).
+        Campi calcolati disponibili: <span class="field-tag">foglio</span>,
+        <span class="field-tag">particella</span>,
+        <span class="field-tag">sez_censuaria</span> (opzionale).
+      </p>
+    </div>
+    <div class="alert info">
+      <strong>Nota fonte dati:</strong> I dati vengono scaricati dal servizio WFS dell'Agenzia delle Entrate
+      tramite il portale RNDT. URL formato:
+      <code>https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/GetDataset.php?dataset={REGIONE}.zip</code>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ CAMPI -->
+  <section id="campi">
+    <h2>Campi calcolati</h2>
+    <p>
+      Il plugin aggiunge automaticamente campi calcolati a partire dal campo
+      <span class="field-tag">gml_id</span> (presente nei GML originali) e dal campo
+      <span class="field-tag">ADMINISTRATIVEUNIT</span> (codice Belfiore del comune).
+    </p>
+
+    <h3>Struttura del gml_id</h3>
+    <pre>CadastralParcel.IT.AGE.PLA.M011_000100.1
+                           ^^^^─────────────── Belfiore (es. M011 = Palermo)
+                               ^─────────────── Sezione censuaria (1 char)
+                                ^^^^──────────── Foglio (4 char, posizioni 32-35)
+                                    ^^────────── Particella (da posizione 39)</pre>
+
+    <table>
+      <tr><th>Campo</th><th>Tipo</th><th>Disponibile</th><th>Descrizione</th></tr>
+      <tr>
+        <td><span class="field-tag">foglio</span></td>
+        <td>String</td>
+        <td><span class="badge badge-green">MAP + PLE</span></td>
+        <td>Numero del foglio catastale (4 cifre, estratto da gml_id[32:36])</td>
+      </tr>
+      <tr>
+        <td><span class="field-tag">particella</span></td>
+        <td>String</td>
+        <td><span class="badge badge-blue">Solo PLE</span></td>
+        <td>Numero della particella catastale (estratto da gml_id[39:])</td>
+      </tr>
+      <tr>
+        <td><span class="field-tag">sez_censuaria</span></td>
+        <td>String (1)</td>
+        <td><span class="badge badge-amber">Solo PLE – opzionale</span></td>
+        <td>Sezione censuaria (1 carattere, estratto da gml_id[31:32]). Attivabile con il checkbox.</td>
+      </tr>
+      <tr>
+        <td><span class="field-tag">comune</span></td>
+        <td>String</td>
+        <td><span class="badge badge-green">MAP + PLE – opzionale</span></td>
+        <td>Nome del comune ricavato dal codice Belfiore contenuto in ADMINISTRATIVEUNIT.
+          Attivabile con il checkbox <em>Aggiungi Nome Comune</em>.</td>
+      </tr>
+    </table>
+
+    <div class="alert">
+      <strong>Campo ADMINISTRATIVEUNIT:</strong> contiene il codice Belfiore del comune
+      (es. <code>M011</code> = Palermo, <code>A662</code> = Agrigento).
+      Questo campo è già presente nei GML originali e viene conservato nell'output.
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ FILTRO COMUNI -->
+  <section id="filtro-comuni">
+    <h2>Filtro Comuni</h2>
+    <p>
+      Il <strong>filtro per comune</strong> consente di elaborare solo i comuni selezionati
+      all'interno delle province scelte, riducendo i tempi di elaborazione e le dimensioni
+      dei file di output.
+    </p>
+    <h3>Come funziona il transfer widget</h3>
+    <ul>
+      <li>Seleziona una o più province: la lista <em>Comuni disponibili</em> si popola automaticamente</li>
+      <li>Usa la <strong>barra di ricerca</strong> per filtrare i comuni per nome</li>
+      <li>Doppio clic su un comune (o pulsante →) per spostarlo nella lista <em>Selezionati</em></li>
+      <li>Doppio clic su un comune selezionato (o pulsante ←) per rimuoverlo dalla selezione</li>
+      <li>Il contatore mostra quanti comuni sono attualmente selezionati</li>
+      <li>Il nome di ciascun comune include la sigla provincia in parentesi: <em>Villarosa (EN)</em></li>
+    </ul>
+    <div class="alert ok">
+      Se non viene selezionato nessun comune, il plugin elabora <strong>tutti i comuni</strong>
+      della/delle province scelte.
+    </div>
+    <h3>Suffisso nel nome file</h3>
+    <p>
+      Quando il filtro è attivo, il nome del file di output viene automaticamente suffisso
+      con i codici Belfiore dei comuni selezionati. Esempio:
+    </p>
+    <pre>particelle_catastali_A662_A089.gpkg   ← filtro con 2 comuni</pre>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ OUTPUT -->
+  <section id="output">
+    <h2>Output</h2>
+    <div class="card">
+      <h3>File GeoPackage (.gpkg)</h3>
+      <p>I file prodotti sono GeoPackage standard, apribili in QGIS, GRASS, GDAL e qualsiasi
+         GIS compatibile con OGR.</p>
+      <table>
+        <tr><th>Campo</th><th>Note</th></tr>
+        <tr><td><span class="field-tag">fid</span></td><td>Identificatore univoco feature</td></tr>
+        <tr><td><span class="field-tag">gml_id</span></td><td>Identificatore originale GML (AdE)</td></tr>
+        <tr><td><span class="field-tag">ADMINISTRATIVEUNIT</span></td><td>Codice Belfiore del comune</td></tr>
+        <tr><td><span class="field-tag">foglio</span></td><td>Numero foglio catastale</td></tr>
+        <tr><td><span class="field-tag">particella</span></td><td>Numero particella (solo PLE)</td></tr>
+        <tr><td><span class="field-tag">sez_censuaria</span></td><td>Sezione censuaria (opzionale, solo PLE)</td></tr>
+        <tr><td><span class="field-tag">comune</span></td><td>Nome comune (opzionale, MAP e PLE)</td></tr>
+      </table>
+    </div>
+    <h3>CRS</h3>
+    <p>
+      Il CRS nativo dei dati AdE è <strong>EPSG:6706</strong> (RDN2008 Geographic 2D – coordinate in gradi
+      decimali). Se non viene selezionata alcuna riproiezione, il GeoPackage viene salvato in EPSG:6706.
+      Per lavorare in UTM o altri sistemi metrici, usa il widget <em>Riproietta</em>.
+    </p>
+    <div class="alert info">
+      Proiezioni comuni consigliate:
+      <code>EPSG:32632</code> (UTM32N), <code>EPSG:32633</code> (UTM33N),
+      <code>EPSG:6875</code> (RDN2008/Italy zone), <code>EPSG:3857</code> (Web Mercator).
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ NOTE TECNICHE -->
+  <section id="note">
+    <h2>Note tecniche</h2>
+
+    <h3>Strategia di merge (3 livelli)</h3>
+    <p>Il plugin tenta il merge con tre strategie in cascata:</p>
+    <ol>
+      <li><strong>QGIS <code>mergevectorlayers</code></strong> – metodo principale, il più veloce</li>
+      <li><strong>Merge a batch da 10 file</strong> – usato se il metodo 1 fallisce</li>
+      <li><strong>Merge OGR diretto</strong> – fallback finale, usa GDAL/OGR nativo</li>
+    </ol>
+
+    <h3>Struttura ZIP dei dati AdE</h3>
+    <pre>REGIONE.zip
+└── {PROV}.zip
+    └── {BELFIORE}_{NOME}.zip
+        ├── {BELFIORE}_{NOME}_ple.gml
+        └── {BELFIORE}_{NOME}_map.gml</pre>
+
+    <h3>Gestione memoria</h3>
+    <p>
+      I file ZIP delle province vengono estratti in memoria (<code>BytesIO</code>) senza
+      scrivere file intermedi su disco. Solo i GML necessari vengono estratti su disco
+      nella cartella temporanea. La cartella viene pulita alla chiusura del plugin.
+    </p>
+
+    <h3>Elaborazione in background</h3>
+    <p>
+      Tutta l'elaborazione avviene in un <strong>QgsTask</strong> dedicato, così QGIS
+      rimane reattivo durante il download e il merge. Il pulsante <em>STOP!</em> permette
+      di interrompere l'elaborazione in qualsiasi momento.
+    </p>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ FAQ -->
+  <section id="faq">
+    <h2>FAQ</h2>
+
+    <div class="card">
+      <h3>Il layer appare a (0,0) o non si vede sulla mappa</h3>
+      <p>
+        Questo problema era dovuto a un CRS non assegnato nel GeoPackage prodotto.
+        Nelle versioni recenti del plugin il CRS <strong>EPSG:6706</strong> viene scritto
+        direttamente nelle tabelle SRS del GeoPackage. Se hai file prodotti da versioni
+        precedenti, usa <em>Imposta SRS layer</em> in QGIS per assegnare EPSG:6706.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>L'elaborazione è lenta per province grandi</h3>
+      <p>
+        Province con molti comuni (es. Roma, Milano) possono richiedere diversi minuti.
+        Usa il <strong>Filtro Comuni</strong> per elaborare solo i comuni di interesse
+        e ridurre drasticamente i tempi.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Il campo <code>comune</code> è vuoto per alcune feature</h3>
+      <p>
+        Accade se il codice Belfiore in <code>ADMINISTRATIVEUNIT</code> non è riconosciuto
+        (comune soppresso, fusione recente, ecc.). Il campo viene lasciato vuoto senza
+        interrompere l'elaborazione.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Errore "No module named" all'avvio del plugin</h3>
+      <p>
+        Assicurati di aver installato la versione corretta e di avere
+        <strong>solo una versione</strong> del plugin nella cartella dei plugin di QGIS.
+        Crea un nuovo profilo QGIS se il problema persiste.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Posso usare il plugin offline?</h3>
+      <p>
+        No. Il download dei dati richiede connessione internet verso il server
+        dell'Agenzia delle Entrate (<code>wfs.cartografia.agenziaentrate.gov.it</code>).
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ CREDITI -->
+  <section id="crediti">
+    <h2>Crediti</h2>
+    <table>
+      <tr><th>Ruolo</th><th>Nome</th><th>Profilo</th></tr>
+      <tr>
+        <td>Sviluppo principale</td>
+        <td><strong>Totò Fiandaca</strong></td>
+        <td><a href="https://github.com/pigreco" target="_blank">@pigreco</a></td>
+      </tr>
+      <tr>
+        <td>Co-sviluppatore</td>
+        <td><strong>Giulio Fattori</strong></td>
+        <td><a href="https://github.com/giuliofattori" target="_blank">@giuliofattori</a></td>
+      </tr>
+    </table>
+    <h3>Fonte dati</h3>
+    <ul>
+      <li>
+        <a href="https://geodati.gov.it" target="_blank">RNDT – Repertorio Nazionale Dati Territoriali</a>
+        — dati catastali vettoriali AdE
+      </li>
+      <li>
+        <a href="https://github.com/opendatasicilia/comuni-italiani" target="_blank">opendatasicilia/comuni-italiani</a>
+        — lookup codici Belfiore / comuni / province
+      </li>
+    </ul>
+    <h3>Licenza</h3>
+    <p>Il plugin è rilasciato sotto licenza <strong>GNU General Public License v2</strong>.</p>
+    <p>
+      <a href="https://github.com/pigreco/CatastoIT_GML_Merger_Pro" target="_blank">
+        Repository GitHub
+      </a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/pigreco/CatastoIT_GML_Merger_Pro/issues" target="_blank">
+        Segnala un bug
+      </a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/pigreco/CatastoIT_GML_Merger_Pro/releases" target="_blank">
+        Releases
+      </a>
+    </p>
+  </section>
+
+</div>
+
+<footer>
+  <p>
+    CatastoIT GML Merger Pro &mdash; documentazione ufficiale &mdash;
+    <a href="https://github.com/pigreco/CatastoIT_GML_Merger_Pro">github.com/pigreco/CatastoIT_GML_Merger_Pro</a>
+  </p>
+</footer>
+
+</body>
+</html>

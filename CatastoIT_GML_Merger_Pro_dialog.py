@@ -29,8 +29,8 @@ sys.path.append(os.path.dirname(__file__))
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtWidgets import QPushButton, QListWidgetItem
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtCore import Qt, QUrl
+from qgis.PyQt.QtGui import QDesktopServices
 from .regions import REGIONS, get_provinces
 from .comuni import get_comuni_by_province
 
@@ -52,13 +52,13 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
             self.btn_cancel.clicked.connect(self.cancel_operation)
             self.layout().addWidget(self.btn_cancel)
 
-        self.le_folder.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\munnizza")
-        self.le_temp_folder.lineEdit().setPlaceholderText("ES: /media/emanuele/extra/temp (opzionale - usa cartella di sistema se vuoto)")
+        self.le_folder.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\destinazione")
+        self.le_temp_folder.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\temporaneo (opzionale - usa cartella di sistema se vuoto)")
         self.le_map_output.setPlaceholderText("Solo nome file (es. mappe_catastali)")
         self.le_ple_output.setPlaceholderText("Solo nome file (es. particelle_catastali)")
         self.le_url.setPlaceholderText("ES: https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/GetDataset.php?dataset=SICILIA.zip")
 
-        self.btn_toggle_help.clicked.connect(self.toggle_help_panel)
+        self.btn_guida.clicked.connect(self._open_help_url)
 
         self.populate_regions()
 
@@ -84,7 +84,6 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         self.list_comuni_disponibili.itemDoubleClicked.connect(self._add_comune_singolo)
         self.list_comuni_selezionati.itemDoubleClicked.connect(self._remove_comune_singolo)
 
-        self.setup_help_content()
         self.update_provinces()
 
     def cancel_operation(self):
@@ -138,13 +137,14 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         all_comuni = []
         for prov_item in selected_provinces:
             sigla = prov_item.text().strip().upper()
-            all_comuni.extend(get_comuni_by_province(sigla))
+            for codice, nome in get_comuni_by_province(sigla):
+                all_comuni.append((codice, nome, sigla))
 
         all_comuni.sort(key=lambda x: x[1])
 
-        for codice, nome in all_comuni:
+        for codice, nome, sigla in all_comuni:
             if codice not in selected_codes:
-                item = QListWidgetItem(nome)
+                item = QListWidgetItem(f"{nome} ({sigla})")
                 item.setData(Qt.UserRole, codice)
                 self.list_comuni_disponibili.addItem(item)
 
@@ -214,20 +214,5 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         self.label_comuni_selezionati.setText("Selezionati (0)")
         self.le_cerca_comune.clear()
 
-    def toggle_help_panel(self):
-        if self.help_browser.isVisible():
-            self.help_browser.hide()
-            self.btn_toggle_help.setIcon(QIcon(":/qt-project.org/styles/commonstyle/images/right-32.png"))
-            self.btn_toggle_help.setToolTip("Mostra guida")
-        else:
-            self.help_browser.show()
-            self.btn_toggle_help.setIcon(QIcon(":/qt-project.org/styles/commonstyle/images/left-32.png"))
-            self.btn_toggle_help.setToolTip("Nascondi guida")
-
-    def setup_help_content(self):
-        help_file_path = os.path.join(os.path.dirname(__file__), 'help_content.html')
-        if os.path.exists(help_file_path):
-            with open(help_file_path, 'r', encoding='utf-8') as html_file:
-                self.help_browser.setHtml(html_file.read())
-        else:
-            self.help_browser.setHtml("<p>File della guida non trovato.</p>")
+    def _open_help_url(self):
+        QDesktopServices.openUrl(QUrl('https://pigreco.github.io/CatastoIT_GML_Merger_Pro/'))
