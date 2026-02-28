@@ -37,7 +37,7 @@ from zipfile import ZipFile
 from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator, QVariant, Qt, pyqtSignal
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QApplication, QListWidget
-from qgis.core import Qgis, QgsField, QgsMessageLog, QgsProject, QgsVectorLayer, QgsTask, QgsApplication
+from qgis.core import Qgis, QgsCoordinateReferenceSystem, QgsField, QgsMessageLog, QgsProject, QgsVectorLayer, QgsTask, QgsApplication
 import processing
 
 # -- Import moduli locali del progetto --
