@@ -26,6 +26,12 @@
     }
 
     /* ── TOP BAR ── */
+    #topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
     header {
       background: var(--green);
       color: #fff;
@@ -33,10 +39,6 @@
       display: flex;
       align-items: center;
       gap: 18px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: 0 2px 8px rgba(0,0,0,.25);
     }
     header img { height: 42px; border-radius: 6px; }
     header h1  { font-size: 1.4rem; font-weight: 700; letter-spacing: .5px; }
@@ -64,10 +66,10 @@
     .page { max-width: 940px; margin: 0 auto; padding: 32px 24px 64px; }
 
     /* ── SECTION ── */
-    /* scroll-margin-top compensa header (~78px) + nav (~42px) + margine */
+    /* scroll-margin-top compensa #topbar (header ~78px + nav ~42px) + margine */
     section {
       margin-bottom: 52px;
-      scroll-margin-top: 130px;
+      scroll-margin-top: 135px;
     }
     section h2 {
       font-size: 1.25rem;
@@ -232,6 +234,7 @@
 </head>
 <body>
 
+<div id="topbar">
 <header>
   <img src="https://raw.githubusercontent.com/pigreco/CatastoIT_GML_Merger_Pro/main/img/icon_b.png" alt="icon">
   <div>
@@ -253,6 +256,7 @@
   <a href="#faq">FAQ</a>
   <a href="#crediti">Crediti</a>
 </nav>
+</div><!-- /topbar -->
 
 <div class="page">
 
