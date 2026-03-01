@@ -1038,13 +1038,26 @@ class GmlProcessingTask(QgsTask):
                     self.log_message.emit(f"ERRORE: Directory temporanea non scrivibile: {os.path.dirname(temp_merge)}")
                     return None
 
-                # Verifica che i file sorgente esistano e siano leggibili
+                # Verifica che i file sorgente esistano, siano leggibili e validi
                 valid_source_files = []
+                skipped_files = []
                 for sf in source_files:
                     if os.path.exists(sf) and os.access(sf, os.R_OK):
-                        valid_source_files.append(sf)
+                        try:
+                            test_layer = QgsVectorLayer(sf, "test_validity", "ogr")
+                            if test_layer.isValid():
+                                valid_source_files.append(sf)
+                            else:
+                                skipped_files.append(os.path.basename(sf))
+                                self.log_message.emit(f"AVVISO: File GML non valido, saltato: {os.path.basename(sf)}")
+                        except Exception as e:
+                            skipped_files.append(os.path.basename(sf))
+                            self.log_message.emit(f"AVVISO: Errore validazione file, saltato: {os.path.basename(sf)} ({str(e)})")
                     else:
                         self.log_message.emit(f"ATTENZIONE: File sorgente non accessibile: {sf}")
+
+                if skipped_files:
+                    self.log_message.emit(f"File GML non validi saltati ({len(skipped_files)}): {', '.join(skipped_files)}")
 
                 if not valid_source_files:
                     self.log_message.emit("ERRORE: Nessun file sorgente valido trovato")
