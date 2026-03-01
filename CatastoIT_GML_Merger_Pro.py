@@ -614,6 +614,9 @@ class CatastoIT_GML_Merger_Pro:
                     
                     ple_layer = QgsVectorLayer(ple_file, base_name, "ogr")
                     if ple_layer.isValid():
+                        qml_path = os.path.join(self.plugin_dir, 'ple_style.qml')
+                        if os.path.exists(qml_path):
+                            ple_layer.loadNamedStyle(qml_path)
                         QgsProject.instance().addMapLayer(ple_layer)
                         self.dlg.text_log.append(f"Layer PLE '{base_name}' caricato in QGIS")
                     else:
