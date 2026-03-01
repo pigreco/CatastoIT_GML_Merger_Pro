@@ -1,6 +1,6 @@
 # Guida al plugin CatastoIT_GML_Merger_Pro per QGIS
 
-> **v0.5** — [Guida online](https://pigreco.github.io/CatastoIT_GML_Merger_Pro/) | [Releases](https://github.com/pigreco/CatastoIT_GML_Merger_Pro/releases) | [Segnala un problema](https://github.com/pigreco/CatastoIT_GML_Merger_Pro/issues)
+> **v0.6** — [Guida online](https://pigreco.github.io/CatastoIT_GML_Merger_Pro/) | [Releases](https://github.com/pigreco/CatastoIT_GML_Merger_Pro/releases) | [Segnala un problema](https://github.com/pigreco/CatastoIT_GML_Merger_Pro/issues)
 
 ## Descrizione generale
 **CatastoIT_GML_Merger_Pro** è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano. Il plugin permette di lavorare con file di mappa (MAP) e particelle (PLE), convertendoli nel formato GPKG e aggiungendo i campi foglio, particella, sezione censuaria e nome del comune per un'integrazione completa nei flussi di lavoro GIS.
@@ -23,6 +23,7 @@
 12. **Riproiezione dati**: Possibilità di riproiettare i dati catastali in altri sistemi di riferimento (CRS) oltre al nativo (EPSG:6706)
 13. **Nome comune** *(nuovo in v0.5)*: Checkbox opzionale per aggiungere il campo `comune` con il nome del comune ricavato automaticamente dal codice Belfiore
 14. **Guida online** *(nuovo in v0.5)*: Documentazione completa su [GitHub Pages](https://pigreco.github.io/CatastoIT_GML_Merger_Pro/)
+15. **Stile predefinito PLE** *(nuovo in v0.6)*: Al caricamento in QGIS, il layer particelle viene visualizzato con renderer a regole — particelle trasparenti, strade in grigio, acque in blu
 
 ## Come utilizzare il plugin
 
