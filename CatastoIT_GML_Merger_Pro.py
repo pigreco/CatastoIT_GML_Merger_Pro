@@ -359,6 +359,13 @@ class CatastoIT_GML_Merger_Pro:
 
             inputs['load_layers'] = self.dlg.cb_load_layers.isChecked()
             print(inputs['load_layers'])
+
+            granularity_map = {
+                0: 'unico',
+                1: 'per_provincia',
+                2: 'per_comune',
+            }
+            inputs['output_granularity'] = granularity_map.get(self.dlg.cb_output_granularity.currentIndex(), 'unico')
             
             self.dlg.text_log.clear()
             log_message("<span style='color:green;font-weight:bold;'>Parametri verificati correttamente</span>")
@@ -592,35 +599,49 @@ class CatastoIT_GML_Merger_Pro:
             # Carica i layer se l'opzione è attiva
             if result.get('load_layers', False):
                 self.dlg.text_log.append("\n<span style='color:#FF8C00;font-weight:bold;'>Caricamento layer in QGIS...</span>")
-                
-                # Carica il layer MAP se disponibile
-                if result.get('map_output') and result['map_count'] > 0:
-                    map_file = result['map_output']
-                    file_name = os.path.basename(map_file)
-                    base_name = os.path.splitext(file_name)[0]
-                    
-                    map_layer = QgsVectorLayer(map_file, base_name, "ogr")
-                    if map_layer.isValid():
-                        QgsProject.instance().addMapLayer(map_layer)
+
+                granularity = result.get('output_granularity', 'unico')
+                qml_path = os.path.join(self.plugin_dir, 'ple_style.qml')
+
+                def load_map_layer(map_file, parent=None):
+                    base_name = os.path.splitext(os.path.basename(map_file))[0]
+                    layer = QgsVectorLayer(map_file, base_name, "ogr")
+                    if layer.isValid():
+                        QgsProject.instance().addMapLayer(layer, parent is None)
+                        if parent is not None:
+                            parent.addLayer(layer)
                         self.dlg.text_log.append(f"Layer MAP '{base_name}' caricato in QGIS")
                     else:
                         self.dlg.text_log.append(f"ERRORE: Impossibile caricare il layer MAP '{base_name}'")
-                
-                # Carica il layer PLE se disponibile
-                if result.get('ple_output') and result['ple_count'] > 0:
-                    ple_file = result['ple_output']
-                    file_name = os.path.basename(ple_file)
-                    base_name = os.path.splitext(file_name)[0]
-                    
-                    ple_layer = QgsVectorLayer(ple_file, base_name, "ogr")
-                    if ple_layer.isValid():
-                        qml_path = os.path.join(self.plugin_dir, 'ple_style.qml')
+
+                def load_ple_layer(ple_file, parent=None):
+                    base_name = os.path.splitext(os.path.basename(ple_file))[0]
+                    layer = QgsVectorLayer(ple_file, base_name, "ogr")
+                    if layer.isValid():
                         if os.path.exists(qml_path):
-                            ple_layer.loadNamedStyle(qml_path)
-                        QgsProject.instance().addMapLayer(ple_layer)
+                            layer.loadNamedStyle(qml_path)
+                        QgsProject.instance().addMapLayer(layer, parent is None)
+                        if parent is not None:
+                            parent.addLayer(layer)
                         self.dlg.text_log.append(f"Layer PLE '{base_name}' caricato in QGIS")
                     else:
                         self.dlg.text_log.append(f"ERRORE: Impossibile caricare il layer PLE '{base_name}'")
+
+                if granularity == 'unico':
+                    if result.get('map_output') and result['map_count'] > 0:
+                        load_map_layer(result['map_output'])
+                    if result.get('ple_output') and result['ple_count'] > 0:
+                        load_ple_layer(result['ple_output'])
+                else:
+                    # Crea un gruppo nel layer panel
+                    label_gran = "per provincia" if granularity == 'per_provincia' else "per comune"
+                    group_name = f"Catasto - {label_gran}"
+                    root = QgsProject.instance().layerTreeRoot()
+                    group = root.insertGroup(0, group_name)
+                    for map_file in result.get('map_outputs', []):
+                        load_map_layer(map_file, parent=group)
+                    for ple_file in result.get('ple_outputs', []):
+                        load_ple_layer(ple_file, parent=group)
 
             # Mostra i tempi di elaborazione
             if result.get('processing_times'):
@@ -776,6 +797,7 @@ class GmlProcessingTask(QgsTask):
                     self.setProgress(int(prov_progress))
                     
                     prov_name = os.path.basename(prov_zip_path)
+                    prov_code = os.path.splitext(prov_name)[0].upper()
                     self.log_message.emit(f"Elaborazione provincia: {prov_name}")
                     
                     # Estrai il file ZIP della provincia in un BytesIO per processarlo in memoria
@@ -803,13 +825,13 @@ class GmlProcessingTask(QgsTask):
 
                                 com_name = os.path.basename(com_zip_path)
 
+                                # Codice Belfiore comune: "A070_AGIRA.zip" → "A070"
+                                com_belfiore = os.path.splitext(com_name)[0].split('_')[0].upper()
+
                                 # Filtro per codice Belfiore comune (opzionale)
-                                # com_name es: "A070_AGIRA.zip" → codice = "A070"
                                 comuni_filter = self.inputs.get('comuni_filter', [])
-                                if comuni_filter:
-                                    com_belfiore = os.path.splitext(com_name)[0].split('_')[0].upper()
-                                    if com_belfiore not in comuni_filter:
-                                        continue
+                                if comuni_filter and com_belfiore not in comuni_filter:
+                                    continue
 
                                 processed_comuni += 1
 
@@ -840,9 +862,17 @@ class GmlProcessingTask(QgsTask):
                                             
                                             if (is_ple and self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]) or \
                                                (is_map and self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]):
-                                                
-                                                # Determina la cartella di destinazione
-                                                dest_folder = ple_folder if is_ple else map_folder
+
+                                                # Determina la cartella di destinazione in base alla granularità
+                                                granularity = self.inputs.get('output_granularity', 'unico')
+                                                base_folder = ple_folder if is_ple else map_folder
+                                                if granularity == 'per_provincia':
+                                                    dest_folder = os.path.join(base_folder, prov_code)
+                                                elif granularity == 'per_comune':
+                                                    dest_folder = os.path.join(base_folder, com_belfiore)
+                                                else:
+                                                    dest_folder = base_folder
+                                                os.makedirs(dest_folder, exist_ok=True)
                                                 dest_path = os.path.join(dest_folder, file_name)
                                                 
                                                 # Estrai il file nella cartella appropriata
@@ -871,74 +901,102 @@ class GmlProcessingTask(QgsTask):
             
             # Esegui l'unione dei file
             self.processing_times = {}
+            granularity = self.inputs.get('output_granularity', 'unico')
 
-            original_map_output = None
-            original_ple_output = None
+            def get_merge_subdirs(base_folder):
+                """Restituisce lista (key, folder) da mergiare in base alla granularità."""
+                if granularity == 'unico':
+                    return [(None, base_folder)]
+                subdirs = sorted([
+                    d for d in os.listdir(base_folder)
+                    if os.path.isdir(os.path.join(base_folder, d))
+                ])
+                return [(key, os.path.join(base_folder, key)) for key in subdirs]
 
-            # Esegui l'unione una sola volta per tipo di file
+            def build_output_path(base_output, key):
+                """Aggiunge suffisso _{key} al percorso output se key è specificato."""
+                if key is None:
+                    return base_output
+                base, ext = os.path.splitext(base_output)
+                return f"{base}_{key}{ext}"
+
+            map_outputs = []
+            ple_outputs = []
+
             if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"] and map_count > 0 and not self.isCanceled():
-                self.log_message.emit("\nUnione files MAP\n")
-                map_time = self.merge_files(
-                    map_folder, self.inputs["map_output"], "MAP"
-                )
-                original_map_output = self.inputs["map_output"]  # Salva il percorso originale
-                self.setProgress(75)  # 75% dopo unione MAP
-                if map_time:
-                    self.processing_times["MAP"] = map_time
+                for key, src_folder in get_merge_subdirs(map_folder):
+                    if self.isCanceled():
+                        break
+                    out_path = build_output_path(self.inputs["map_output"], key)
+                    label = "MAP" + (f" ({key})" if key else "")
+                    self.log_message.emit(f"\nUnione files {label}\n")
+                    t = self.merge_files(src_folder, out_path, "MAP")
+                    if t:
+                        self.processing_times[label] = t
+                        map_outputs.append(out_path)
+                self.setProgress(75)
 
             if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"] and ple_count > 0 and not self.isCanceled():
-                self.log_message.emit("\nUnione files PLE\n")
                 self.log_message.emit("<span style='color:blue;font-weight:bold;'>Attendere prego, operazione costosa!<br>Puoi ridurre ad icona e continuare a lavorare con QGIS!</span>")
-                ple_time = self.merge_files(
-                    ple_folder, self.inputs["ple_output"], "PLE"
-                )
-                original_ple_output = self.inputs["ple_output"]  # Salva il percorso originale
-                # Se abbiamo già elaborato MAP arriviamo al 100%, altrimenti al 75%
+                for key, src_folder in get_merge_subdirs(ple_folder):
+                    if self.isCanceled():
+                        break
+                    out_path = build_output_path(self.inputs["ple_output"], key)
+                    label = "PLE" + (f" ({key})" if key else "")
+                    self.log_message.emit(f"\nUnione files {label}\n")
+                    t = self.merge_files(src_folder, out_path, "PLE")
+                    if t:
+                        self.processing_times[label] = t
+                        ple_outputs.append(out_path)
                 if self.inputs["file_type"] == "Entrambi":
-                    self.setProgress(90)  # Lasciamo il 10% per eventuale riproiezione
+                    self.setProgress(90)
                 else:
                     self.setProgress(75)
-                    
-                if ple_time:
-                    self.processing_times["PLE"] = ple_time
-        
+
             # Esegui la riproiezione se necessario
             target_crs = self.inputs.get('target_crs', 'EPSG:6706')
-            
+
             if target_crs != 'EPSG:6706' and not self.isCanceled():
                 self.log_message.emit(f"\n<span style='color:blue;font-weight:bold;'>Riproiezione dei file al sistema {target_crs}...</span>")
-                
-                # Riproietta MAP se esiste
-                if original_map_output and os.path.exists(original_map_output):
-                    reproject_start = datetime.now()
-                    reprojected_map = self.reproject_layer(original_map_output, target_crs, "MAP")
-                    if reprojected_map:
-                        self.inputs["map_output"] = reprojected_map
-                        reproject_time = datetime.now() - reproject_start
-                        self.processing_times["Riproiezione MAP"] = reproject_time
-                
-                # Riproietta PLE se esiste
-                if original_ple_output and os.path.exists(original_ple_output):
-                    reproject_start = datetime.now()
-                    reprojected_ple = self.reproject_layer(original_ple_output, target_crs, "PLE")
-                    if reprojected_ple:
-                        self.inputs["ple_output"] = reprojected_ple
-                        reproject_time = datetime.now() - reproject_start
-                        self.processing_times["Riproiezione PLE"] = reproject_time
+
+                new_map_outputs = []
+                for out_path in map_outputs:
+                    if os.path.exists(out_path):
+                        start = datetime.now()
+                        rep = self.reproject_layer(out_path, target_crs, "MAP")
+                        self.processing_times[f"Riproiezione MAP {os.path.basename(out_path)}"] = datetime.now() - start
+                        new_map_outputs.append(rep if rep else out_path)
+                    else:
+                        new_map_outputs.append(out_path)
+                map_outputs = new_map_outputs
+
+                new_ple_outputs = []
+                for out_path in ple_outputs:
+                    if os.path.exists(out_path):
+                        start = datetime.now()
+                        rep = self.reproject_layer(out_path, target_crs, "PLE")
+                        self.processing_times[f"Riproiezione PLE {os.path.basename(out_path)}"] = datetime.now() - start
+                        new_ple_outputs.append(rep if rep else out_path)
+                    else:
+                        new_ple_outputs.append(out_path)
+                ple_outputs = new_ple_outputs
 
             self.log_message.emit("\nElaborazione completata!")
-            self.setProgress(100)  # 100% a elaborazione completata
-            
+            self.setProgress(100)
+
             # Prepara risultati
             self.result = {
                 'map_count': map_count,
                 'ple_count': ple_count,
-                'map_output': self.inputs.get("map_output", None) if map_count > 0 else None,
-                'ple_output': self.inputs.get("ple_output", None) if ple_count > 0 else None,
+                'map_outputs': map_outputs,
+                'ple_outputs': ple_outputs,
+                'map_output': map_outputs[0] if map_outputs else None,
+                'ple_output': ple_outputs[0] if ple_outputs else None,
+                'output_granularity': granularity,
                 'temp_dir': temp_dir,
                 'processing_times': self.processing_times,
                 'load_layers': self.inputs.get("load_layers", False),
-                'target_crs': self.inputs.get("target_crs", "EPSG:6706")  # Aggiungi il CRS target ai risultati
+                'target_crs': self.inputs.get("target_crs", "EPSG:6706"),
             }
             
             return True
