@@ -534,12 +534,25 @@ class CatastoIT_GML_Merger_Pro:
             self.dlg.le_map_output.setPlaceholderText("Solo nome file (es. mappe_catastali)")
             self.dlg.le_ple_output.setPlaceholderText("Solo nome file (es. particelle_catastali)")
         
+        # Disconnetti segnali prima di riconnetterli per evitare connessioni duplicate
+        # (run() viene chiamata ad ogni apertura del plugin, non solo alla prima)
+        try: self.dlg.cb_region.currentIndexChanged.disconnect(url_update)
+        except Exception: pass
+        try: self.dlg.cb_file_type.currentIndexChanged.disconnect(aggiorna_campi_output)
+        except Exception: pass
+        try: self.dlg.btn_process.clicked.disconnect()
+        except Exception: pass
+        try: self.dlg.btn_close.clicked.disconnect()
+        except Exception: pass
+        try: self.dlg.btn_stop.clicked.disconnect()
+        except Exception: pass
+
         self.dlg.cb_region.currentIndexChanged.connect(url_update)
-        self.dlg.cb_file_type.currentIndexChanged.connect(aggiorna_campi_output)                                                       
+        self.dlg.cb_file_type.currentIndexChanged.connect(aggiorna_campi_output)
         self.dlg.btn_process.clicked.connect(process_gml_files)
         self.dlg.btn_close.clicked.connect(pulisci_temporanea)
-        self.dlg.btn_stop.clicked.connect(self.stop_processing)  # Ora funzionerà correttamente
-        self.dlg.btn_stop.setEnabled(False)  # Disabilitato all'avvio
+        self.dlg.btn_stop.clicked.connect(self.stop_processing)
+        self.dlg.btn_stop.setEnabled(False)
         
         # Imposta lo stato iniziale dei campi di output
         aggiorna_campi_output()
@@ -731,40 +744,38 @@ class GmlProcessingTask(QgsTask):
             province_codes = [p.strip().upper() for p in self.inputs['province_code'].split(',')]
             self.log_message.emit(f"Province selezionate: {', '.join(province_codes)}")
             
-            # Modifica il nome dell'output con tutti i codici provincia.
-            # Per granularità per_comune il suffisso province è omesso: build_output_path
-            # aggiungerà già "{prov}_{belfiore}" come chiave nel nome del file.
+            # Modifica il nome dell'output in base alla granularità:
+            # - unico: aggiunge suffisso province + eventuale suffisso comuni
+            # - per_provincia: build_output_path aggiunge già "_EN"/"_RG" → nessun prefisso
+            # - per_comune: build_output_path aggiunge già "_EN_A098" → nessun prefisso
             granularity = self.inputs.get('output_granularity', 'unico')
-            province_suffix = "_".join(province_codes)
-            if granularity != 'per_comune':
+            comuni_filter = self.inputs.get('comuni_filter', [])
+
+            if granularity == 'unico':
+                province_suffix = "_".join(province_codes)
                 if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
                     base_name = os.path.splitext(self.inputs["map_output"])[0]
                     ext = os.path.splitext(self.inputs["map_output"])[1]
                     self.inputs["map_output"] = f"{base_name}_{province_suffix}{ext}"
                     self.log_message.emit(f"Output MAP aggiornato: {self.inputs['map_output']}")
-
                 if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
                     base_name = os.path.splitext(self.inputs["ple_output"])[0]
                     ext = os.path.splitext(self.inputs["ple_output"])[1]
                     self.inputs["ple_output"] = f"{base_name}_{province_suffix}{ext}"
                     self.log_message.emit(f"Output PLE aggiornato: {self.inputs['ple_output']}")
 
-            # Aggiunge suffisso con codici Belfiore se il filtro comuni è attivo
-            # Per granularità per_comune il suffisso è omesso: build_output_path aggiunge già il codice comune
-            comuni_filter = self.inputs.get('comuni_filter', [])
-            granularity = self.inputs.get('output_granularity', 'unico')
-            if comuni_filter and granularity != 'per_comune':
-                comuni_suffix = "_".join(comuni_filter)
-                if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
-                    base_name = os.path.splitext(self.inputs["map_output"])[0]
-                    ext = os.path.splitext(self.inputs["map_output"])[1]
-                    self.inputs["map_output"] = f"{base_name}_{comuni_suffix}{ext}"
-                    self.log_message.emit(f"Output MAP con filtro comuni: {self.inputs['map_output']}")
-                if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
-                    base_name = os.path.splitext(self.inputs["ple_output"])[0]
-                    ext = os.path.splitext(self.inputs["ple_output"])[1]
-                    self.inputs["ple_output"] = f"{base_name}_{comuni_suffix}{ext}"
-                    self.log_message.emit(f"Output PLE con filtro comuni: {self.inputs['ple_output']}")
+                if comuni_filter:
+                    comuni_suffix = "_".join(comuni_filter)
+                    if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
+                        base_name = os.path.splitext(self.inputs["map_output"])[0]
+                        ext = os.path.splitext(self.inputs["map_output"])[1]
+                        self.inputs["map_output"] = f"{base_name}_{comuni_suffix}{ext}"
+                        self.log_message.emit(f"Output MAP con filtro comuni: {self.inputs['map_output']}")
+                    if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
+                        base_name = os.path.splitext(self.inputs["ple_output"])[0]
+                        ext = os.path.splitext(self.inputs["ple_output"])[1]
+                        self.inputs["ple_output"] = f"{base_name}_{comuni_suffix}{ext}"
+                        self.log_message.emit(f"Output PLE con filtro comuni: {self.inputs['ple_output']}")
 
             # Contatori per i file
             ple_count = map_count = 0
