@@ -502,8 +502,9 @@ class CatastoIT_GML_Merger_Pro:
             self.dlg.cb_file_type.setCurrentIndex(0)
             self.dlg.cb_format.setCurrentIndex(0)
             self.dlg.cb_region.setCurrentIndex(0)
-            self.dlg.list_provinces.clearSelection()  # Cancella le selezioni dalla lista
-            self.dlg._reset_comuni_widget()
+            # Forza ripopolamento lista province: setCurrentIndex(0) non emette il segnale
+            # se la regione era già a indice 0, lasciando la selezione precedente attiva.
+            self.dlg.update_provinces()
             self.dlg.cb_region.setEnabled(True)
             self.dlg.le_url.setEnabled(True)
             self.dlg.le_url.clear()
@@ -591,10 +592,12 @@ class CatastoIT_GML_Merger_Pro:
             self.dlg.text_log.append("\nElaborazione completata con successo!")
             
             # Aggiorna le informazioni dei percorsi output
-            if result.get('map_output') and result['map_count'] > 0:
-                self.dlg.text_log.append(f"File MAP salvato in: {result['map_output']}")
-            if result.get('ple_output') and result['ple_count'] > 0:
-                self.dlg.text_log.append(f"File PLE salvato in: {result['ple_output']}")
+            if result['map_count'] > 0:
+                for f in result.get('map_outputs', []):
+                    self.dlg.text_log.append(f"File MAP salvato in: {f}")
+            if result['ple_count'] > 0:
+                for f in result.get('ple_outputs', []):
+                    self.dlg.text_log.append(f"File PLE salvato in: {f}")
             
             # Carica i layer se l'opzione è attiva
             if result.get('load_layers', False):
@@ -619,7 +622,11 @@ class CatastoIT_GML_Merger_Pro:
                     layer = QgsVectorLayer(ple_file, base_name, "ogr")
                     if layer.isValid():
                         if os.path.exists(qml_path):
-                            layer.loadNamedStyle(qml_path)
+                            msg, ok = layer.loadNamedStyle(qml_path)
+                            if not ok:
+                                self.dlg.text_log.append(f"Avviso stile PLE: {msg} (percorso: {qml_path})")
+                        else:
+                            self.dlg.text_log.append(f"Avviso: stile QML non trovato in {qml_path}")
                         QgsProject.instance().addMapLayer(layer, parent is None)
                         if parent is not None:
                             parent.addLayer(layer)
@@ -724,23 +731,29 @@ class GmlProcessingTask(QgsTask):
             province_codes = [p.strip().upper() for p in self.inputs['province_code'].split(',')]
             self.log_message.emit(f"Province selezionate: {', '.join(province_codes)}")
             
-            # Modifica il nome dell'output con tutti i codici provincia
+            # Modifica il nome dell'output con tutti i codici provincia.
+            # Per granularità per_comune il suffisso province è omesso: build_output_path
+            # aggiungerà già "{prov}_{belfiore}" come chiave nel nome del file.
+            granularity = self.inputs.get('output_granularity', 'unico')
             province_suffix = "_".join(province_codes)
-            if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
-                base_name = os.path.splitext(self.inputs["map_output"])[0]
-                ext = os.path.splitext(self.inputs["map_output"])[1]
-                self.inputs["map_output"] = f"{base_name}_{province_suffix}{ext}"
-                self.log_message.emit(f"Output MAP aggiornato: {self.inputs['map_output']}")
-            
-            if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
-                base_name = os.path.splitext(self.inputs["ple_output"])[0]
-                ext = os.path.splitext(self.inputs["ple_output"])[1]
-                self.inputs["ple_output"] = f"{base_name}_{province_suffix}{ext}"
-                self.log_message.emit(f"Output PLE aggiornato: {self.inputs['ple_output']}")
+            if granularity != 'per_comune':
+                if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
+                    base_name = os.path.splitext(self.inputs["map_output"])[0]
+                    ext = os.path.splitext(self.inputs["map_output"])[1]
+                    self.inputs["map_output"] = f"{base_name}_{province_suffix}{ext}"
+                    self.log_message.emit(f"Output MAP aggiornato: {self.inputs['map_output']}")
+
+                if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
+                    base_name = os.path.splitext(self.inputs["ple_output"])[0]
+                    ext = os.path.splitext(self.inputs["ple_output"])[1]
+                    self.inputs["ple_output"] = f"{base_name}_{province_suffix}{ext}"
+                    self.log_message.emit(f"Output PLE aggiornato: {self.inputs['ple_output']}")
 
             # Aggiunge suffisso con codici Belfiore se il filtro comuni è attivo
+            # Per granularità per_comune il suffisso è omesso: build_output_path aggiunge già il codice comune
             comuni_filter = self.inputs.get('comuni_filter', [])
-            if comuni_filter:
+            granularity = self.inputs.get('output_granularity', 'unico')
+            if comuni_filter and granularity != 'per_comune':
                 comuni_suffix = "_".join(comuni_filter)
                 if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
                     base_name = os.path.splitext(self.inputs["map_output"])[0]
@@ -869,7 +882,7 @@ class GmlProcessingTask(QgsTask):
                                                 if granularity == 'per_provincia':
                                                     dest_folder = os.path.join(base_folder, prov_code)
                                                 elif granularity == 'per_comune':
-                                                    dest_folder = os.path.join(base_folder, com_belfiore)
+                                                    dest_folder = os.path.join(base_folder, f"{prov_code}_{com_belfiore}")
                                                 else:
                                                     dest_folder = base_folder
                                                 os.makedirs(dest_folder, exist_ok=True)
@@ -1177,116 +1190,120 @@ class GmlProcessingTask(QgsTask):
                 result = processing.run("native:retainfields", filter_params)
                 output_file = result['OUTPUT']
 
-                # Fix CRS: native:retainfields non propaga il metadato SRS nel GPKG.
-                # Scriviamo EPSG:6706 direttamente nelle tabelle SRS del file GPKG.
-                if output_file.lower().endswith('.gpkg'):
+                # Aggiungi campi calcolati e fix CRS tramite sqlite3 puro (thread-safe, nessun oggetto Qt)
+                if output_file.lower().endswith('.gpkg') and os.path.exists(output_file):
                     try:
-                        crs_ref = QgsCoordinateReferenceSystem('EPSG:6706')
+                        needs_particella = file_type == "PLE"
+                        needs_sez = file_type == "PLE" and self.inputs.get("add_sezione_censuaria", False)
+                        needs_comune = self.inputs.get("add_nome_comune", False)
+
                         conn = sqlite3.connect(output_file)
                         c = conn.cursor()
+
+                        # Nome tabella dal GPKG
+                        table_name = c.execute(
+                            "SELECT table_name FROM gpkg_contents LIMIT 1"
+                        ).fetchone()[0]
+
+                        # Aggiungi colonne (ignora se già esistono)
+                        cols = [("foglio", "TEXT")]
+                        if needs_particella:
+                            cols.append(("particella", "TEXT"))
+                            self.log_message.emit("Aggiunta campo 'particella'...")
+                        if needs_sez:
+                            cols.append(("sez_censuaria", "TEXT"))
+                            self.log_message.emit("Aggiunta campo 'sez_censuaria'...")
+                        if needs_comune:
+                            cols.append(("comune", "TEXT"))
+                            self.log_message.emit("Aggiunta campo 'comune'...")
+                        self.log_message.emit(f"Aggiunta campo 'foglio' al layer {file_type}...")
+                        for col_name, col_type in cols:
+                            try:
+                                c.execute(f'ALTER TABLE "{table_name}" ADD COLUMN "{col_name}" {col_type}')
+                            except Exception:
+                                pass  # colonna già presente
+
+                        # Verifica esistenza ADMINISTRATIVEUNIT
+                        has_au = c.execute(
+                            f"SELECT COUNT(*) FROM pragma_table_info(\"{table_name}\") WHERE name='ADMINISTRATIVEUNIT'"
+                        ).fetchone()[0] > 0
+
+                        # Leggi tutti i record in una sola query
+                        au_col = '"ADMINISTRATIVEUNIT"' if has_au else 'NULL'
+                        rows = c.execute(
+                            f'SELECT fid, gml_id, {au_col} FROM "{table_name}"'
+                        ).fetchall()
+
+                        # Drop trigger R-tree che chiamano ST_IsEmpty (non disponibile
+                        # nel sqlite3 standard — funzione SpatiaLite).
+                        # I trigger si attivano su qualsiasi UPDATE della tabella,
+                        # anche su colonne non geometriche. L'R-tree rimane valido
+                        # perché non modifichiamo la geometria.
+                        triggers = c.execute(
+                            "SELECT name FROM sqlite_master WHERE type='trigger' AND tbl_name=?",
+                            (table_name,)
+                        ).fetchall()
+                        for (trig_name,) in triggers:
+                            c.execute(f'DROP TRIGGER IF EXISTS "{trig_name}"')
+
+                        # Calcola valori in Python e accumula per batch update
+                        set_parts = ['"foglio"=?']
+                        if needs_particella:
+                            set_parts.append('"particella"=?')
+                        if needs_sez:
+                            set_parts.append('"sez_censuaria"=?')
+                        if needs_comune and has_au:
+                            set_parts.append('"comune"=?')
+                        set_clause = ", ".join(set_parts)
+
+                        updates = []
+                        for fid, gml_id, au in rows:
+                            gml_id = gml_id or ''
+                            vals = [gml_id[32:36] if len(gml_id) > 36 else '']
+                            if needs_particella:
+                                vals.append(gml_id[39:] if len(gml_id) > 39 else '')
+                            if needs_sez:
+                                vals.append(gml_id[31:32] if len(gml_id) > 32 else '')
+                            if needs_comune and has_au:
+                                vals.append(
+                                    COMUNI_BY_CODE.get(str(au).upper(), ('',))[0] if au else ''
+                                )
+                            vals.append(fid)
+                            updates.append(tuple(vals))
+
+                        c.executemany(
+                            f'UPDATE "{table_name}" SET {set_clause} WHERE fid=?', updates
+                        )
+                        self.log_message.emit(f"Campi calcolati correttamente per il layer {file_type}")
+
+                        # Fix CRS: EPSG:4326 (WGS84) — coordinate identiche a RDN2008 (<1m per l'Italia).
+                        # EPSG:6706 con GDAL 3.12+/PROJ 9.7+ produce axis mapping 2,1 che causa
+                        # rendering errato in QGIS con layer OSM (EPSG:3857).
+                        wkt_4326 = (
+                            'GEOGCS["WGS 84",DATUM["WGS_1984",'
+                            'SPHEROID["WGS 84",6378137,298.257223563]],'
+                            'PRIMEM["Greenwich",0],'
+                            'UNIT["degree",0.0174532925199433],'
+                            'AUTHORITY["EPSG","4326"]]'
+                        )
                         c.execute(
                             "INSERT OR REPLACE INTO gpkg_spatial_ref_sys "
                             "(srs_name, srs_id, organization, organization_coordsys_id, definition) "
                             "VALUES (?,?,?,?,?)",
-                            (crs_ref.description(), 6706, 'EPSG', 6706, crs_ref.toWkt())
+                            ('WGS 84', 4326, 'EPSG', 4326, wkt_4326)
                         )
-                        c.execute("UPDATE gpkg_geometry_columns SET srs_id=6706")
-                        c.execute("UPDATE gpkg_contents SET srs_id=6706")
+                        c.execute("UPDATE gpkg_geometry_columns SET srs_id=4326")
+                        c.execute("UPDATE gpkg_contents SET srs_id=4326")
                         conn.commit()
                         conn.close()
-                        self.log_message.emit("CRS EPSG:6706 assegnato al file GPKG")
+                        self.log_message.emit("CRS EPSG:4326 assegnato al file GPKG")
+
                     except Exception as e:
-                        self.log_message.emit(f"Avviso: impossibile assegnare CRS al GPKG: {e}")
-
-                # Ottimizzazione della generazione dei campi utilizzando operazioni in batch
-                self.log_message.emit(f"Aggiunta campo 'foglio' al layer {file_type}...")
-                output_layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
-                
-                if output_layer.isValid():
-                    # Prepara tutti i campi da aggiungere in una singola operazione
-                    fields_to_add = [QgsField("foglio", QVariant.String)]
-                    if file_type == "PLE":
-                        self.log_message.emit("Aggiunta campo 'particella'...")
-                        fields_to_add.append(QgsField("particella", QVariant.String))
-                        # Aggiungi campo sezione censuaria se richiesto
-                        if self.inputs.get("add_sezione_censuaria", False):
-                            self.log_message.emit("Aggiunta campo 'sez_censuaria'...")
-                            fields_to_add.append(QgsField("sez_censuaria", QVariant.String, len=1))
-                    # Aggiungi campo nome comune se richiesto (vale per MAP e PLE)
-                    if self.inputs.get("add_nome_comune", False):
-                        self.log_message.emit("Aggiunta campo 'comune'...")
-                        fields_to_add.append(QgsField("comune", QVariant.String))
-                    
-                    # Inizia la transazione per le modifiche in batch
-                    output_layer.startEditing()
-                    output_layer.dataProvider().addAttributes(fields_to_add)
-                    output_layer.updateFields()
-                    
-                    # Ottieni gli indici una sola volta fuori dal ciclo
-                    foglio_idx = output_layer.fields().indexFromName("foglio")
-                    particella_idx = output_layer.fields().indexFromName("particella") if file_type == "PLE" else -1
-                    sez_censuaria_idx = output_layer.fields().indexFromName("sez_censuaria") if file_type == "PLE" and self.inputs.get("add_sezione_censuaria", False) else -1
-                    gml_id_idx = output_layer.fields().indexFromName("gml_id")
-                    au_idx = output_layer.fields().indexFromName("ADMINISTRATIVEUNIT")
-                    comune_idx = output_layer.fields().indexFromName("comune") if self.inputs.get("add_nome_comune", False) else -1
-
-                    # Calcola valori una sola volta
-                    needs_particella = file_type == "PLE" and particella_idx >= 0
-                    needs_sez_censuaria = file_type == "PLE" and sez_censuaria_idx >= 0
-                    needs_nome_comune = comune_idx >= 0 and au_idx >= 0
-                    
-                    # Inizializza il buffer per le modifiche prima di usarlo
-                    changes_buffer = {}
-                    
-                    # Usa una singola passata per elaborare tutti i dati
-                    for feature in output_layer.getFeatures():
-                        feature_id = feature.id()
-                        gml_id = feature[gml_id_idx]
-                        
-                        # Estrai foglio (posizioni 32-36) con controllo più efficiente
-                        if len(gml_id) > 36:
-                            foglio = gml_id[32:36]
-                            changes_buffer[feature_id] = {foglio_idx: foglio}
-                            
-                            # Estrai particella per PLE (dalla posizione 39 in poi)
-                            if needs_particella and len(gml_id) > 39:
-                                particella = gml_id[39:]
-                                changes_buffer[feature_id][particella_idx] = particella
-                            
-                            # Estrai sezione censuaria per PLE (indice Python 31, 1 carattere prima del foglio)
-                            if needs_sez_censuaria and len(gml_id) > 32:
-                                sez_censuaria = gml_id[31:32]
-                                changes_buffer[feature_id][sez_censuaria_idx] = sez_censuaria
-
-                        # Aggiungi nome comune da ADMINISTRATIVEUNIT (codice Belfiore)
-                        if needs_nome_comune:
-                            belfiore = feature[au_idx]
-                            if belfiore:
-                                nome_comune = COMUNI_BY_CODE.get(str(belfiore).upper(), ('',))[0]
-                                changes_buffer.setdefault(feature_id, {})[comune_idx] = nome_comune
-                    
-                    # Applica tutte le modifiche in batch
-                    batch_size = 500  # Controlla annullamento ogni 500 feature
-                    batch_count = 0
-                    for feature_id, attrs in changes_buffer.items():
-                        for field_idx, value in attrs.items():
-                            output_layer.changeAttributeValue(feature_id, field_idx, value)
-                        
-                        batch_count += 1
-                        if batch_count % batch_size == 0 and self.isCanceled():
-                            output_layer.rollBack()
-                            self.log_message.emit("Operazione annullata dall'utente")
-                            return None
-                    
-                    # Finalizza le modifiche e controlla errori
-                    success = output_layer.commitChanges()
-                    if success:
-                        self.log_message.emit(f"Campi calcolati correttamente per il layer {file_type}")
-                    else:
-                        self.log_message.emit(f"ERRORE: Impossibile aggiornare i campi per il layer {file_type}")
-                        self.log_message.emit(str(output_layer.commitErrors()))
+                        self.log_message.emit(f"ERRORE nel calcolo campi: {e}")
+                        import traceback
+                        self.log_message.emit(traceback.format_exc())
                 else:
-                    self.log_message.emit(f"ERRORE: Il layer di output {file_type} non è valido")
+                    self.log_message.emit(f"ERRORE: file output non trovato: {output_file}")
 
                 # Pulizia risorse temporanee in modo più robusto
                 try:
@@ -1296,7 +1313,6 @@ class GmlProcessingTask(QgsTask):
                             QgsProject.instance().removeMapLayer(layer_id)
                     
                     # Libera memoria e dai tempo al sistema
-                    output_layer = None
                     gc.collect()
                     time.sleep(1)
                     
