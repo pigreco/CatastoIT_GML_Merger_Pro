@@ -75,6 +75,17 @@
 - Spazio su disco sufficiente per i dati temporanei e di output
 - Python 3.7 o superiore con librerie GDAL/OGR
 
+## Test v0.8 — Granularità output
+
+| Tipo | Granularità | Filtro comuni | Output | Esito |
+|---|---|---|---|---|
+| PLE | Unico file | sì | `pll_AG_CT_A026_A896.gpkg` | ✅ |
+| PLE | Un file per provincia | sì | `pll_EN.gpkg`, `pll_SR.gpkg` | ✅ |
+| PLE | Un file per comune | sì | `pll_EN_A098.gpkg`, `pll_RG_A014.gpkg` | ✅ |
+| MAP | Unico file | sì | `map_AQ_CH_A018_A367.gpkg` | ✅ |
+| MAP | Un file per provincia | sì | `map_CL.gpkg`, `map_EN.gpkg`, `map_TP.gpkg` | ✅ |
+| MAP | Un file per comune | sì | `map_AG_F126.gpkg`, `map_ME_A194.gpkg` | ✅ |
+
 ## Disclaimer
 
 L'autore del plugin non è un developer ma è riuscito a realizzare il plugin con l'ausilio della AI.
