@@ -204,7 +204,7 @@
         <enum>QgsFileWidget::GetDirectory</enum>
        </property>
        <property name="options">
-        <set>QFileDialog::ShowDirsOnly</set>
+        <set>QFileDialog::Option::ShowDirsOnly</set>
        </property>
        <property name="fileWidgetButtonIcon" stdset="0">
         <iconset>
@@ -653,7 +653,7 @@
         <enum>QgsFileWidget::GetDirectory</enum>
        </property>
        <property name="options">
-        <set>QFileDialog::ShowDirsOnly</set>
+        <set>QFileDialog::Option::ShowDirsOnly</set>
        </property>
        <property name="fileWidgetButtonIcon" stdset="0">
         <iconset>
