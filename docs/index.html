@@ -251,6 +251,7 @@
   <a href="#tipi-file">Tipi di file</a>
   <a href="#campi">Campi calcolati</a>
   <a href="#filtro-comuni">Filtro Comuni</a>
+  <a href="#granularita">Granularità Output</a>
   <a href="#output">Output</a>
   <a href="#note">Note tecniche</a>
   <a href="#faq">FAQ</a>
@@ -355,6 +356,15 @@
       </li>
       <li>
         <div>
+          <strong>Granularità Output</strong><br>
+          Scegli come aggregare i dati nel GeoPackage di output:
+          <em>Unico file (tutti i comuni)</em>, <em>Un file per provincia</em>
+          o <em>Un file per comune</em>. Vedi la sezione
+          <a href="#granularita">Granularità Output</a> per i dettagli.
+        </div>
+      </li>
+      <li>
+        <div>
           <strong>Nome file output</strong><br>
           Inserisci il nome del file di output (senza estensione).
           L'estensione <code>.gpkg</code> viene aggiunta automaticamente.
@@ -398,6 +408,7 @@
       <tr><td><strong>Cartella destinazione</strong></td><td>Dove salvare i GeoPackage finali</td></tr>
       <tr><td><strong>Cartella temporanea</strong></td><td>Cartella per file intermedi (opzionale, usa temp di sistema se vuota)</td></tr>
       <tr><td><strong>Formato Output</strong></td><td>Solo GeoPackage (.gpkg)</td></tr>
+      <tr><td><strong>Granularità Output</strong></td><td>Unico file / per provincia / per comune (vedi sezione dedicata)</td></tr>
       <tr><td><strong>Nome File MAPPE / PARTICELLE</strong></td><td>Nome del file di output senza estensione</td></tr>
       <tr><td><strong>Riproietta</strong></td><td>CRS di destinazione opzionale (default EPSG:6706)</td></tr>
       <tr><td><strong>Carica layer in QGIS</strong></td><td>Aggiunge i layer al progetto al termine</td></tr>
@@ -513,6 +524,64 @@
       con i codici Belfiore dei comuni selezionati. Esempio:
     </p>
     <pre>particelle_catastali_A662_A089.gpkg   ← filtro con 2 comuni</pre>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ GRANULARITÀ OUTPUT -->
+  <section id="granularita">
+    <h2>Granularità Output</h2>
+    <p>
+      La combobox <strong>Granularità</strong> (nella stessa riga di <em>Formato Output</em>)
+      controlla come i dati vengono aggregati nei file GeoPackage prodotti.
+    </p>
+
+    <div class="card">
+      <h3>Unico file (tutti i comuni) <span class="badge badge-green">Default</span></h3>
+      <p>
+        Comportamento classico: tutti i comuni delle province selezionate vengono
+        fusi in <strong>un unico GeoPackage</strong> per tipo (MAP e/o PLE).
+      </p>
+      <pre>mappe_catastali_RM_LT.gpkg
+particelle_catastali_RM_LT.gpkg</pre>
+    </div>
+
+    <div class="card">
+      <h3>Un file per provincia <span class="badge badge-blue">Nuovo</span></h3>
+      <p>
+        Il plugin produce <strong>un GeoPackage separato per ogni provincia</strong> elaborata.
+        Al nome base viene aggiunto il codice provincia come suffisso.
+      </p>
+      <pre>mappe_catastali_RM.gpkg
+mappe_catastali_LT.gpkg
+particelle_catastali_RM.gpkg
+particelle_catastali_LT.gpkg</pre>
+      <p>
+        Se l'opzione <em>Carica layer in QGIS</em> è attiva, tutti i layer vengono
+        caricati all'interno di un <strong>gruppo</strong> nel pannello Layer denominato
+        <em>Catasto – per provincia</em>.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Un file per comune <span class="badge badge-blue">Nuovo</span></h3>
+      <p>
+        Il plugin produce <strong>un GeoPackage separato per ogni comune</strong> elaborato.
+        Al nome base viene aggiunto il codice Belfiore del comune come suffisso.
+      </p>
+      <pre>particelle_catastali_H501.gpkg   ← Roma
+particelle_catastali_A662.gpkg   ← Agrigento
+particelle_catastali_F205.gpkg   ← Milano</pre>
+      <p>
+        Se l'opzione <em>Carica layer in QGIS</em> è attiva, tutti i layer vengono
+        caricati all'interno di un <strong>gruppo</strong> nel pannello Layer denominato
+        <em>Catasto – per comune</em>.
+      </p>
+    </div>
+
+    <div class="alert">
+      <strong>Nota sulla riproiezione:</strong> se è selezionato un CRS diverso da EPSG:6706,
+      ogni file di output viene riproiettato individualmente. Se la riproiezione di un singolo
+      file fallisce, il file viene comunque caricato nel CRS originale EPSG:6706.
+    </div>
   </section>
 
   <!-- ═══════════════════════════════════════════════════ OUTPUT -->

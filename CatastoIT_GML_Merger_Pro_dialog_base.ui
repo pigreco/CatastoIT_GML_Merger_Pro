@@ -372,19 +372,55 @@
       </widget>
      </item>
      <item row="10" column="1">
-      <widget class="QComboBox" name="cb_format">
-       <property name="toolTip">
-        <string>Seleziona il formato di output (Solo GeoPackage!)</string>
-       </property>
-       <property name="editable">
-        <bool>false</bool>
-       </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_format">
        <item>
-        <property name="text">
-         <string>GPKG</string>
-        </property>
+        <widget class="QComboBox" name="cb_format">
+         <property name="toolTip">
+          <string>Seleziona il formato di output (Solo GeoPackage!)</string>
+         </property>
+         <property name="editable">
+          <bool>false</bool>
+         </property>
+         <item>
+          <property name="text">
+           <string>GPKG</string>
+          </property>
+         </item>
+        </widget>
        </item>
-      </widget>
+       <item>
+        <widget class="QLabel" name="label_granularity">
+         <property name="text">
+          <string>Granularità:</string>
+         </property>
+         <property name="toolTip">
+          <string>Scegli come raggruppare i file di output</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cb_output_granularity">
+         <property name="toolTip">
+          <string>Tutti i comuni in un unico file / un file per provincia / un file per comune</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>Unico file (tutti i comuni)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Un file per provincia</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Un file per comune</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item row="21" column="0" colspan="2">
       <layout class="QHBoxLayout" name="horizontalLayout_2"/>

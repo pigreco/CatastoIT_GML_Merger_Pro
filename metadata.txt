@@ -6,7 +6,7 @@
 name=CatastoIT_GML_Merger_Pro
 qgisMinimumVersion=3.22
 description=Download, estrazione e fusione file GML catastali italiani con filtro per comune
-version=0.7
+version=0.8
 author=Salvatore Fiandaca, Giulio Fattori
 email=pigrecoinfinito@gmail.com
 
@@ -26,6 +26,7 @@ changelog= v 0.1 Scarica set particelle e mappe catastali per regione in formato
 	v 0.5 Aggiunto campo nome comune (lookup codice Belfiore); fix SRS nel GPKG dopo retainfields; guida online su GitHub Pages; UI: provincia nella lista comuni, versione nel titolo finestra
 	v 0.6 Stile predefinito per layer PLE: renderer a regole per particelle (trasparente), strade (grigio) e acque (blu)
 	v 0.7 Resilienza file GML: file non validi vengono saltati con avviso nel log, il processo continua con i file validi
+	v 0.8 Granularità output: nuova opzione per salvare i dati in un unico file, un file per provincia o un file per comune; caricamento in QGIS con gruppo layer dedicato per le modalità multi-file
 
 # Tags are comma separated with spaces allowed
 tags=catasto, particelle, fogli, regione, provincia, comune, italia, gml, gpkg, ade

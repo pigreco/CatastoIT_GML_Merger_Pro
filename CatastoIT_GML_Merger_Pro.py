@@ -359,6 +359,13 @@ class CatastoIT_GML_Merger_Pro:
 
             inputs['load_layers'] = self.dlg.cb_load_layers.isChecked()
             print(inputs['load_layers'])
+
+            granularity_map = {
+                0: 'unico',
+                1: 'per_provincia',
+                2: 'per_comune',
+            }
+            inputs['output_granularity'] = granularity_map.get(self.dlg.cb_output_granularity.currentIndex(), 'unico')
             
             self.dlg.text_log.clear()
             log_message("<span style='color:green;font-weight:bold;'>Parametri verificati correttamente</span>")
@@ -495,8 +502,9 @@ class CatastoIT_GML_Merger_Pro:
             self.dlg.cb_file_type.setCurrentIndex(0)
             self.dlg.cb_format.setCurrentIndex(0)
             self.dlg.cb_region.setCurrentIndex(0)
-            self.dlg.list_provinces.clearSelection()  # Cancella le selezioni dalla lista
-            self.dlg._reset_comuni_widget()
+            # Forza ripopolamento lista province: setCurrentIndex(0) non emette il segnale
+            # se la regione era già a indice 0, lasciando la selezione precedente attiva.
+            self.dlg.update_provinces()
             self.dlg.cb_region.setEnabled(True)
             self.dlg.le_url.setEnabled(True)
             self.dlg.le_url.clear()
@@ -526,12 +534,25 @@ class CatastoIT_GML_Merger_Pro:
             self.dlg.le_map_output.setPlaceholderText("Solo nome file (es. mappe_catastali)")
             self.dlg.le_ple_output.setPlaceholderText("Solo nome file (es. particelle_catastali)")
         
+        # Disconnetti segnali prima di riconnetterli per evitare connessioni duplicate
+        # (run() viene chiamata ad ogni apertura del plugin, non solo alla prima)
+        try: self.dlg.cb_region.currentIndexChanged.disconnect(url_update)
+        except Exception: pass
+        try: self.dlg.cb_file_type.currentIndexChanged.disconnect(aggiorna_campi_output)
+        except Exception: pass
+        try: self.dlg.btn_process.clicked.disconnect()
+        except Exception: pass
+        try: self.dlg.btn_close.clicked.disconnect()
+        except Exception: pass
+        try: self.dlg.btn_stop.clicked.disconnect()
+        except Exception: pass
+
         self.dlg.cb_region.currentIndexChanged.connect(url_update)
-        self.dlg.cb_file_type.currentIndexChanged.connect(aggiorna_campi_output)                                                       
+        self.dlg.cb_file_type.currentIndexChanged.connect(aggiorna_campi_output)
         self.dlg.btn_process.clicked.connect(process_gml_files)
         self.dlg.btn_close.clicked.connect(pulisci_temporanea)
-        self.dlg.btn_stop.clicked.connect(self.stop_processing)  # Ora funzionerà correttamente
-        self.dlg.btn_stop.setEnabled(False)  # Disabilitato all'avvio
+        self.dlg.btn_stop.clicked.connect(self.stop_processing)
+        self.dlg.btn_stop.setEnabled(False)
         
         # Imposta lo stato iniziale dei campi di output
         aggiorna_campi_output()
@@ -584,43 +605,63 @@ class CatastoIT_GML_Merger_Pro:
             self.dlg.text_log.append("\nElaborazione completata con successo!")
             
             # Aggiorna le informazioni dei percorsi output
-            if result.get('map_output') and result['map_count'] > 0:
-                self.dlg.text_log.append(f"File MAP salvato in: {result['map_output']}")
-            if result.get('ple_output') and result['ple_count'] > 0:
-                self.dlg.text_log.append(f"File PLE salvato in: {result['ple_output']}")
+            if result['map_count'] > 0:
+                for f in result.get('map_outputs', []):
+                    self.dlg.text_log.append(f"File MAP salvato in: {f}")
+            if result['ple_count'] > 0:
+                for f in result.get('ple_outputs', []):
+                    self.dlg.text_log.append(f"File PLE salvato in: {f}")
             
             # Carica i layer se l'opzione è attiva
             if result.get('load_layers', False):
                 self.dlg.text_log.append("\n<span style='color:#FF8C00;font-weight:bold;'>Caricamento layer in QGIS...</span>")
-                
-                # Carica il layer MAP se disponibile
-                if result.get('map_output') and result['map_count'] > 0:
-                    map_file = result['map_output']
-                    file_name = os.path.basename(map_file)
-                    base_name = os.path.splitext(file_name)[0]
-                    
-                    map_layer = QgsVectorLayer(map_file, base_name, "ogr")
-                    if map_layer.isValid():
-                        QgsProject.instance().addMapLayer(map_layer)
+
+                granularity = result.get('output_granularity', 'unico')
+                qml_path = os.path.join(self.plugin_dir, 'ple_style.qml')
+
+                def load_map_layer(map_file, parent=None):
+                    base_name = os.path.splitext(os.path.basename(map_file))[0]
+                    layer = QgsVectorLayer(map_file, base_name, "ogr")
+                    if layer.isValid():
+                        QgsProject.instance().addMapLayer(layer, parent is None)
+                        if parent is not None:
+                            parent.addLayer(layer)
                         self.dlg.text_log.append(f"Layer MAP '{base_name}' caricato in QGIS")
                     else:
                         self.dlg.text_log.append(f"ERRORE: Impossibile caricare il layer MAP '{base_name}'")
-                
-                # Carica il layer PLE se disponibile
-                if result.get('ple_output') and result['ple_count'] > 0:
-                    ple_file = result['ple_output']
-                    file_name = os.path.basename(ple_file)
-                    base_name = os.path.splitext(file_name)[0]
-                    
-                    ple_layer = QgsVectorLayer(ple_file, base_name, "ogr")
-                    if ple_layer.isValid():
-                        qml_path = os.path.join(self.plugin_dir, 'ple_style.qml')
+
+                def load_ple_layer(ple_file, parent=None):
+                    base_name = os.path.splitext(os.path.basename(ple_file))[0]
+                    layer = QgsVectorLayer(ple_file, base_name, "ogr")
+                    if layer.isValid():
                         if os.path.exists(qml_path):
-                            ple_layer.loadNamedStyle(qml_path)
-                        QgsProject.instance().addMapLayer(ple_layer)
+                            msg, ok = layer.loadNamedStyle(qml_path)
+                            if not ok:
+                                self.dlg.text_log.append(f"Avviso stile PLE: {msg} (percorso: {qml_path})")
+                        else:
+                            self.dlg.text_log.append(f"Avviso: stile QML non trovato in {qml_path}")
+                        QgsProject.instance().addMapLayer(layer, parent is None)
+                        if parent is not None:
+                            parent.addLayer(layer)
                         self.dlg.text_log.append(f"Layer PLE '{base_name}' caricato in QGIS")
                     else:
                         self.dlg.text_log.append(f"ERRORE: Impossibile caricare il layer PLE '{base_name}'")
+
+                if granularity == 'unico':
+                    if result.get('map_output') and result['map_count'] > 0:
+                        load_map_layer(result['map_output'])
+                    if result.get('ple_output') and result['ple_count'] > 0:
+                        load_ple_layer(result['ple_output'])
+                else:
+                    # Crea un gruppo nel layer panel
+                    label_gran = "per provincia" if granularity == 'per_provincia' else "per comune"
+                    group_name = f"Catasto - {label_gran}"
+                    root = QgsProject.instance().layerTreeRoot()
+                    group = root.insertGroup(0, group_name)
+                    for map_file in result.get('map_outputs', []):
+                        load_map_layer(map_file, parent=group)
+                    for ple_file in result.get('ple_outputs', []):
+                        load_ple_layer(ple_file, parent=group)
 
             # Mostra i tempi di elaborazione
             if result.get('processing_times'):
@@ -703,34 +744,38 @@ class GmlProcessingTask(QgsTask):
             province_codes = [p.strip().upper() for p in self.inputs['province_code'].split(',')]
             self.log_message.emit(f"Province selezionate: {', '.join(province_codes)}")
             
-            # Modifica il nome dell'output con tutti i codici provincia
-            province_suffix = "_".join(province_codes)
-            if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
-                base_name = os.path.splitext(self.inputs["map_output"])[0]
-                ext = os.path.splitext(self.inputs["map_output"])[1]
-                self.inputs["map_output"] = f"{base_name}_{province_suffix}{ext}"
-                self.log_message.emit(f"Output MAP aggiornato: {self.inputs['map_output']}")
-            
-            if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
-                base_name = os.path.splitext(self.inputs["ple_output"])[0]
-                ext = os.path.splitext(self.inputs["ple_output"])[1]
-                self.inputs["ple_output"] = f"{base_name}_{province_suffix}{ext}"
-                self.log_message.emit(f"Output PLE aggiornato: {self.inputs['ple_output']}")
-
-            # Aggiunge suffisso con codici Belfiore se il filtro comuni è attivo
+            # Modifica il nome dell'output in base alla granularità:
+            # - unico: aggiunge suffisso province + eventuale suffisso comuni
+            # - per_provincia: build_output_path aggiunge già "_EN"/"_RG" → nessun prefisso
+            # - per_comune: build_output_path aggiunge già "_EN_A098" → nessun prefisso
+            granularity = self.inputs.get('output_granularity', 'unico')
             comuni_filter = self.inputs.get('comuni_filter', [])
-            if comuni_filter:
-                comuni_suffix = "_".join(comuni_filter)
+
+            if granularity == 'unico':
+                province_suffix = "_".join(province_codes)
                 if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
                     base_name = os.path.splitext(self.inputs["map_output"])[0]
                     ext = os.path.splitext(self.inputs["map_output"])[1]
-                    self.inputs["map_output"] = f"{base_name}_{comuni_suffix}{ext}"
-                    self.log_message.emit(f"Output MAP con filtro comuni: {self.inputs['map_output']}")
+                    self.inputs["map_output"] = f"{base_name}_{province_suffix}{ext}"
+                    self.log_message.emit(f"Output MAP aggiornato: {self.inputs['map_output']}")
                 if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
                     base_name = os.path.splitext(self.inputs["ple_output"])[0]
                     ext = os.path.splitext(self.inputs["ple_output"])[1]
-                    self.inputs["ple_output"] = f"{base_name}_{comuni_suffix}{ext}"
-                    self.log_message.emit(f"Output PLE con filtro comuni: {self.inputs['ple_output']}")
+                    self.inputs["ple_output"] = f"{base_name}_{province_suffix}{ext}"
+                    self.log_message.emit(f"Output PLE aggiornato: {self.inputs['ple_output']}")
+
+                if comuni_filter:
+                    comuni_suffix = "_".join(comuni_filter)
+                    if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]:
+                        base_name = os.path.splitext(self.inputs["map_output"])[0]
+                        ext = os.path.splitext(self.inputs["map_output"])[1]
+                        self.inputs["map_output"] = f"{base_name}_{comuni_suffix}{ext}"
+                        self.log_message.emit(f"Output MAP con filtro comuni: {self.inputs['map_output']}")
+                    if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]:
+                        base_name = os.path.splitext(self.inputs["ple_output"])[0]
+                        ext = os.path.splitext(self.inputs["ple_output"])[1]
+                        self.inputs["ple_output"] = f"{base_name}_{comuni_suffix}{ext}"
+                        self.log_message.emit(f"Output PLE con filtro comuni: {self.inputs['ple_output']}")
 
             # Contatori per i file
             ple_count = map_count = 0
@@ -776,6 +821,7 @@ class GmlProcessingTask(QgsTask):
                     self.setProgress(int(prov_progress))
                     
                     prov_name = os.path.basename(prov_zip_path)
+                    prov_code = os.path.splitext(prov_name)[0].upper()
                     self.log_message.emit(f"Elaborazione provincia: {prov_name}")
                     
                     # Estrai il file ZIP della provincia in un BytesIO per processarlo in memoria
@@ -803,13 +849,13 @@ class GmlProcessingTask(QgsTask):
 
                                 com_name = os.path.basename(com_zip_path)
 
+                                # Codice Belfiore comune: "A070_AGIRA.zip" → "A070"
+                                com_belfiore = os.path.splitext(com_name)[0].split('_')[0].upper()
+
                                 # Filtro per codice Belfiore comune (opzionale)
-                                # com_name es: "A070_AGIRA.zip" → codice = "A070"
                                 comuni_filter = self.inputs.get('comuni_filter', [])
-                                if comuni_filter:
-                                    com_belfiore = os.path.splitext(com_name)[0].split('_')[0].upper()
-                                    if com_belfiore not in comuni_filter:
-                                        continue
+                                if comuni_filter and com_belfiore not in comuni_filter:
+                                    continue
 
                                 processed_comuni += 1
 
@@ -840,9 +886,17 @@ class GmlProcessingTask(QgsTask):
                                             
                                             if (is_ple and self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"]) or \
                                                (is_map and self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"]):
-                                                
-                                                # Determina la cartella di destinazione
-                                                dest_folder = ple_folder if is_ple else map_folder
+
+                                                # Determina la cartella di destinazione in base alla granularità
+                                                granularity = self.inputs.get('output_granularity', 'unico')
+                                                base_folder = ple_folder if is_ple else map_folder
+                                                if granularity == 'per_provincia':
+                                                    dest_folder = os.path.join(base_folder, prov_code)
+                                                elif granularity == 'per_comune':
+                                                    dest_folder = os.path.join(base_folder, f"{prov_code}_{com_belfiore}")
+                                                else:
+                                                    dest_folder = base_folder
+                                                os.makedirs(dest_folder, exist_ok=True)
                                                 dest_path = os.path.join(dest_folder, file_name)
                                                 
                                                 # Estrai il file nella cartella appropriata
@@ -871,74 +925,102 @@ class GmlProcessingTask(QgsTask):
             
             # Esegui l'unione dei file
             self.processing_times = {}
+            granularity = self.inputs.get('output_granularity', 'unico')
 
-            original_map_output = None
-            original_ple_output = None
+            def get_merge_subdirs(base_folder):
+                """Restituisce lista (key, folder) da mergiare in base alla granularità."""
+                if granularity == 'unico':
+                    return [(None, base_folder)]
+                subdirs = sorted([
+                    d for d in os.listdir(base_folder)
+                    if os.path.isdir(os.path.join(base_folder, d))
+                ])
+                return [(key, os.path.join(base_folder, key)) for key in subdirs]
 
-            # Esegui l'unione una sola volta per tipo di file
+            def build_output_path(base_output, key):
+                """Aggiunge suffisso _{key} al percorso output se key è specificato."""
+                if key is None:
+                    return base_output
+                base, ext = os.path.splitext(base_output)
+                return f"{base}_{key}{ext}"
+
+            map_outputs = []
+            ple_outputs = []
+
             if self.inputs["file_type"] in ["Mappe (MAP)", "Entrambi"] and map_count > 0 and not self.isCanceled():
-                self.log_message.emit("\nUnione files MAP\n")
-                map_time = self.merge_files(
-                    map_folder, self.inputs["map_output"], "MAP"
-                )
-                original_map_output = self.inputs["map_output"]  # Salva il percorso originale
-                self.setProgress(75)  # 75% dopo unione MAP
-                if map_time:
-                    self.processing_times["MAP"] = map_time
+                for key, src_folder in get_merge_subdirs(map_folder):
+                    if self.isCanceled():
+                        break
+                    out_path = build_output_path(self.inputs["map_output"], key)
+                    label = "MAP" + (f" ({key})" if key else "")
+                    self.log_message.emit(f"\nUnione files {label}\n")
+                    t = self.merge_files(src_folder, out_path, "MAP")
+                    if t:
+                        self.processing_times[label] = t
+                        map_outputs.append(out_path)
+                self.setProgress(75)
 
             if self.inputs["file_type"] in ["Particelle (PLE)", "Entrambi"] and ple_count > 0 and not self.isCanceled():
-                self.log_message.emit("\nUnione files PLE\n")
                 self.log_message.emit("<span style='color:blue;font-weight:bold;'>Attendere prego, operazione costosa!<br>Puoi ridurre ad icona e continuare a lavorare con QGIS!</span>")
-                ple_time = self.merge_files(
-                    ple_folder, self.inputs["ple_output"], "PLE"
-                )
-                original_ple_output = self.inputs["ple_output"]  # Salva il percorso originale
-                # Se abbiamo già elaborato MAP arriviamo al 100%, altrimenti al 75%
+                for key, src_folder in get_merge_subdirs(ple_folder):
+                    if self.isCanceled():
+                        break
+                    out_path = build_output_path(self.inputs["ple_output"], key)
+                    label = "PLE" + (f" ({key})" if key else "")
+                    self.log_message.emit(f"\nUnione files {label}\n")
+                    t = self.merge_files(src_folder, out_path, "PLE")
+                    if t:
+                        self.processing_times[label] = t
+                        ple_outputs.append(out_path)
                 if self.inputs["file_type"] == "Entrambi":
-                    self.setProgress(90)  # Lasciamo il 10% per eventuale riproiezione
+                    self.setProgress(90)
                 else:
                     self.setProgress(75)
-                    
-                if ple_time:
-                    self.processing_times["PLE"] = ple_time
-        
+
             # Esegui la riproiezione se necessario
             target_crs = self.inputs.get('target_crs', 'EPSG:6706')
-            
+
             if target_crs != 'EPSG:6706' and not self.isCanceled():
                 self.log_message.emit(f"\n<span style='color:blue;font-weight:bold;'>Riproiezione dei file al sistema {target_crs}...</span>")
-                
-                # Riproietta MAP se esiste
-                if original_map_output and os.path.exists(original_map_output):
-                    reproject_start = datetime.now()
-                    reprojected_map = self.reproject_layer(original_map_output, target_crs, "MAP")
-                    if reprojected_map:
-                        self.inputs["map_output"] = reprojected_map
-                        reproject_time = datetime.now() - reproject_start
-                        self.processing_times["Riproiezione MAP"] = reproject_time
-                
-                # Riproietta PLE se esiste
-                if original_ple_output and os.path.exists(original_ple_output):
-                    reproject_start = datetime.now()
-                    reprojected_ple = self.reproject_layer(original_ple_output, target_crs, "PLE")
-                    if reprojected_ple:
-                        self.inputs["ple_output"] = reprojected_ple
-                        reproject_time = datetime.now() - reproject_start
-                        self.processing_times["Riproiezione PLE"] = reproject_time
+
+                new_map_outputs = []
+                for out_path in map_outputs:
+                    if os.path.exists(out_path):
+                        start = datetime.now()
+                        rep = self.reproject_layer(out_path, target_crs, "MAP")
+                        self.processing_times[f"Riproiezione MAP {os.path.basename(out_path)}"] = datetime.now() - start
+                        new_map_outputs.append(rep if rep else out_path)
+                    else:
+                        new_map_outputs.append(out_path)
+                map_outputs = new_map_outputs
+
+                new_ple_outputs = []
+                for out_path in ple_outputs:
+                    if os.path.exists(out_path):
+                        start = datetime.now()
+                        rep = self.reproject_layer(out_path, target_crs, "PLE")
+                        self.processing_times[f"Riproiezione PLE {os.path.basename(out_path)}"] = datetime.now() - start
+                        new_ple_outputs.append(rep if rep else out_path)
+                    else:
+                        new_ple_outputs.append(out_path)
+                ple_outputs = new_ple_outputs
 
             self.log_message.emit("\nElaborazione completata!")
-            self.setProgress(100)  # 100% a elaborazione completata
-            
+            self.setProgress(100)
+
             # Prepara risultati
             self.result = {
                 'map_count': map_count,
                 'ple_count': ple_count,
-                'map_output': self.inputs.get("map_output", None) if map_count > 0 else None,
-                'ple_output': self.inputs.get("ple_output", None) if ple_count > 0 else None,
+                'map_outputs': map_outputs,
+                'ple_outputs': ple_outputs,
+                'map_output': map_outputs[0] if map_outputs else None,
+                'ple_output': ple_outputs[0] if ple_outputs else None,
+                'output_granularity': granularity,
                 'temp_dir': temp_dir,
                 'processing_times': self.processing_times,
                 'load_layers': self.inputs.get("load_layers", False),
-                'target_crs': self.inputs.get("target_crs", "EPSG:6706")  # Aggiungi il CRS target ai risultati
+                'target_crs': self.inputs.get("target_crs", "EPSG:6706"),
             }
             
             return True
@@ -1119,116 +1201,120 @@ class GmlProcessingTask(QgsTask):
                 result = processing.run("native:retainfields", filter_params)
                 output_file = result['OUTPUT']
 
-                # Fix CRS: native:retainfields non propaga il metadato SRS nel GPKG.
-                # Scriviamo EPSG:6706 direttamente nelle tabelle SRS del file GPKG.
-                if output_file.lower().endswith('.gpkg'):
+                # Aggiungi campi calcolati e fix CRS tramite sqlite3 puro (thread-safe, nessun oggetto Qt)
+                if output_file.lower().endswith('.gpkg') and os.path.exists(output_file):
                     try:
-                        crs_ref = QgsCoordinateReferenceSystem('EPSG:6706')
+                        needs_particella = file_type == "PLE"
+                        needs_sez = file_type == "PLE" and self.inputs.get("add_sezione_censuaria", False)
+                        needs_comune = self.inputs.get("add_nome_comune", False)
+
                         conn = sqlite3.connect(output_file)
                         c = conn.cursor()
+
+                        # Nome tabella dal GPKG
+                        table_name = c.execute(
+                            "SELECT table_name FROM gpkg_contents LIMIT 1"
+                        ).fetchone()[0]
+
+                        # Aggiungi colonne (ignora se già esistono)
+                        cols = [("foglio", "TEXT")]
+                        if needs_particella:
+                            cols.append(("particella", "TEXT"))
+                            self.log_message.emit("Aggiunta campo 'particella'...")
+                        if needs_sez:
+                            cols.append(("sez_censuaria", "TEXT"))
+                            self.log_message.emit("Aggiunta campo 'sez_censuaria'...")
+                        if needs_comune:
+                            cols.append(("comune", "TEXT"))
+                            self.log_message.emit("Aggiunta campo 'comune'...")
+                        self.log_message.emit(f"Aggiunta campo 'foglio' al layer {file_type}...")
+                        for col_name, col_type in cols:
+                            try:
+                                c.execute(f'ALTER TABLE "{table_name}" ADD COLUMN "{col_name}" {col_type}')
+                            except Exception:
+                                pass  # colonna già presente
+
+                        # Verifica esistenza ADMINISTRATIVEUNIT
+                        has_au = c.execute(
+                            f"SELECT COUNT(*) FROM pragma_table_info(\"{table_name}\") WHERE name='ADMINISTRATIVEUNIT'"
+                        ).fetchone()[0] > 0
+
+                        # Leggi tutti i record in una sola query
+                        au_col = '"ADMINISTRATIVEUNIT"' if has_au else 'NULL'
+                        rows = c.execute(
+                            f'SELECT fid, gml_id, {au_col} FROM "{table_name}"'
+                        ).fetchall()
+
+                        # Drop trigger R-tree che chiamano ST_IsEmpty (non disponibile
+                        # nel sqlite3 standard — funzione SpatiaLite).
+                        # I trigger si attivano su qualsiasi UPDATE della tabella,
+                        # anche su colonne non geometriche. L'R-tree rimane valido
+                        # perché non modifichiamo la geometria.
+                        triggers = c.execute(
+                            "SELECT name FROM sqlite_master WHERE type='trigger' AND tbl_name=?",
+                            (table_name,)
+                        ).fetchall()
+                        for (trig_name,) in triggers:
+                            c.execute(f'DROP TRIGGER IF EXISTS "{trig_name}"')
+
+                        # Calcola valori in Python e accumula per batch update
+                        set_parts = ['"foglio"=?']
+                        if needs_particella:
+                            set_parts.append('"particella"=?')
+                        if needs_sez:
+                            set_parts.append('"sez_censuaria"=?')
+                        if needs_comune and has_au:
+                            set_parts.append('"comune"=?')
+                        set_clause = ", ".join(set_parts)
+
+                        updates = []
+                        for fid, gml_id, au in rows:
+                            gml_id = gml_id or ''
+                            vals = [gml_id[32:36] if len(gml_id) > 36 else '']
+                            if needs_particella:
+                                vals.append(gml_id[39:] if len(gml_id) > 39 else '')
+                            if needs_sez:
+                                vals.append(gml_id[31:32] if len(gml_id) > 32 else '')
+                            if needs_comune and has_au:
+                                vals.append(
+                                    COMUNI_BY_CODE.get(str(au).upper(), ('',))[0] if au else ''
+                                )
+                            vals.append(fid)
+                            updates.append(tuple(vals))
+
+                        c.executemany(
+                            f'UPDATE "{table_name}" SET {set_clause} WHERE fid=?', updates
+                        )
+                        self.log_message.emit(f"Campi calcolati correttamente per il layer {file_type}")
+
+                        # Fix CRS: EPSG:4326 (WGS84) — coordinate identiche a RDN2008 (<1m per l'Italia).
+                        # EPSG:6706 con GDAL 3.12+/PROJ 9.7+ produce axis mapping 2,1 che causa
+                        # rendering errato in QGIS con layer OSM (EPSG:3857).
+                        wkt_4326 = (
+                            'GEOGCS["WGS 84",DATUM["WGS_1984",'
+                            'SPHEROID["WGS 84",6378137,298.257223563]],'
+                            'PRIMEM["Greenwich",0],'
+                            'UNIT["degree",0.0174532925199433],'
+                            'AUTHORITY["EPSG","4326"]]'
+                        )
                         c.execute(
                             "INSERT OR REPLACE INTO gpkg_spatial_ref_sys "
                             "(srs_name, srs_id, organization, organization_coordsys_id, definition) "
                             "VALUES (?,?,?,?,?)",
-                            (crs_ref.description(), 6706, 'EPSG', 6706, crs_ref.toWkt())
+                            ('WGS 84', 4326, 'EPSG', 4326, wkt_4326)
                         )
-                        c.execute("UPDATE gpkg_geometry_columns SET srs_id=6706")
-                        c.execute("UPDATE gpkg_contents SET srs_id=6706")
+                        c.execute("UPDATE gpkg_geometry_columns SET srs_id=4326")
+                        c.execute("UPDATE gpkg_contents SET srs_id=4326")
                         conn.commit()
                         conn.close()
-                        self.log_message.emit("CRS EPSG:6706 assegnato al file GPKG")
+                        self.log_message.emit("CRS EPSG:4326 assegnato al file GPKG")
+
                     except Exception as e:
-                        self.log_message.emit(f"Avviso: impossibile assegnare CRS al GPKG: {e}")
-
-                # Ottimizzazione della generazione dei campi utilizzando operazioni in batch
-                self.log_message.emit(f"Aggiunta campo 'foglio' al layer {file_type}...")
-                output_layer = QgsVectorLayer(output_file, f"{file_type}_Uniti", "ogr")
-                
-                if output_layer.isValid():
-                    # Prepara tutti i campi da aggiungere in una singola operazione
-                    fields_to_add = [QgsField("foglio", QVariant.String)]
-                    if file_type == "PLE":
-                        self.log_message.emit("Aggiunta campo 'particella'...")
-                        fields_to_add.append(QgsField("particella", QVariant.String))
-                        # Aggiungi campo sezione censuaria se richiesto
-                        if self.inputs.get("add_sezione_censuaria", False):
-                            self.log_message.emit("Aggiunta campo 'sez_censuaria'...")
-                            fields_to_add.append(QgsField("sez_censuaria", QVariant.String, len=1))
-                    # Aggiungi campo nome comune se richiesto (vale per MAP e PLE)
-                    if self.inputs.get("add_nome_comune", False):
-                        self.log_message.emit("Aggiunta campo 'comune'...")
-                        fields_to_add.append(QgsField("comune", QVariant.String))
-                    
-                    # Inizia la transazione per le modifiche in batch
-                    output_layer.startEditing()
-                    output_layer.dataProvider().addAttributes(fields_to_add)
-                    output_layer.updateFields()
-                    
-                    # Ottieni gli indici una sola volta fuori dal ciclo
-                    foglio_idx = output_layer.fields().indexFromName("foglio")
-                    particella_idx = output_layer.fields().indexFromName("particella") if file_type == "PLE" else -1
-                    sez_censuaria_idx = output_layer.fields().indexFromName("sez_censuaria") if file_type == "PLE" and self.inputs.get("add_sezione_censuaria", False) else -1
-                    gml_id_idx = output_layer.fields().indexFromName("gml_id")
-                    au_idx = output_layer.fields().indexFromName("ADMINISTRATIVEUNIT")
-                    comune_idx = output_layer.fields().indexFromName("comune") if self.inputs.get("add_nome_comune", False) else -1
-
-                    # Calcola valori una sola volta
-                    needs_particella = file_type == "PLE" and particella_idx >= 0
-                    needs_sez_censuaria = file_type == "PLE" and sez_censuaria_idx >= 0
-                    needs_nome_comune = comune_idx >= 0 and au_idx >= 0
-                    
-                    # Inizializza il buffer per le modifiche prima di usarlo
-                    changes_buffer = {}
-                    
-                    # Usa una singola passata per elaborare tutti i dati
-                    for feature in output_layer.getFeatures():
-                        feature_id = feature.id()
-                        gml_id = feature[gml_id_idx]
-                        
-                        # Estrai foglio (posizioni 32-36) con controllo più efficiente
-                        if len(gml_id) > 36:
-                            foglio = gml_id[32:36]
-                            changes_buffer[feature_id] = {foglio_idx: foglio}
-                            
-                            # Estrai particella per PLE (dalla posizione 39 in poi)
-                            if needs_particella and len(gml_id) > 39:
-                                particella = gml_id[39:]
-                                changes_buffer[feature_id][particella_idx] = particella
-                            
-                            # Estrai sezione censuaria per PLE (indice Python 31, 1 carattere prima del foglio)
-                            if needs_sez_censuaria and len(gml_id) > 32:
-                                sez_censuaria = gml_id[31:32]
-                                changes_buffer[feature_id][sez_censuaria_idx] = sez_censuaria
-
-                        # Aggiungi nome comune da ADMINISTRATIVEUNIT (codice Belfiore)
-                        if needs_nome_comune:
-                            belfiore = feature[au_idx]
-                            if belfiore:
-                                nome_comune = COMUNI_BY_CODE.get(str(belfiore).upper(), ('',))[0]
-                                changes_buffer.setdefault(feature_id, {})[comune_idx] = nome_comune
-                    
-                    # Applica tutte le modifiche in batch
-                    batch_size = 500  # Controlla annullamento ogni 500 feature
-                    batch_count = 0
-                    for feature_id, attrs in changes_buffer.items():
-                        for field_idx, value in attrs.items():
-                            output_layer.changeAttributeValue(feature_id, field_idx, value)
-                        
-                        batch_count += 1
-                        if batch_count % batch_size == 0 and self.isCanceled():
-                            output_layer.rollBack()
-                            self.log_message.emit("Operazione annullata dall'utente")
-                            return None
-                    
-                    # Finalizza le modifiche e controlla errori
-                    success = output_layer.commitChanges()
-                    if success:
-                        self.log_message.emit(f"Campi calcolati correttamente per il layer {file_type}")
-                    else:
-                        self.log_message.emit(f"ERRORE: Impossibile aggiornare i campi per il layer {file_type}")
-                        self.log_message.emit(str(output_layer.commitErrors()))
+                        self.log_message.emit(f"ERRORE nel calcolo campi: {e}")
+                        import traceback
+                        self.log_message.emit(traceback.format_exc())
                 else:
-                    self.log_message.emit(f"ERRORE: Il layer di output {file_type} non è valido")
+                    self.log_message.emit(f"ERRORE: file output non trovato: {output_file}")
 
                 # Pulizia risorse temporanee in modo più robusto
                 try:
@@ -1238,7 +1324,6 @@ class GmlProcessingTask(QgsTask):
                             QgsProject.instance().removeMapLayer(layer_id)
                     
                     # Libera memoria e dai tempo al sistema
-                    output_layer = None
                     gc.collect()
                     time.sleep(1)
                     

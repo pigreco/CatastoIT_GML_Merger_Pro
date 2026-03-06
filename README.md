@@ -1,6 +1,6 @@
 # Guida al plugin CatastoIT_GML_Merger_Pro per QGIS
 
-> **v0.7** — [Guida online](https://pigreco.github.io/CatastoIT_GML_Merger_Pro/) | [Releases](https://github.com/pigreco/CatastoIT_GML_Merger_Pro/releases) | [Segnala un problema](https://github.com/pigreco/CatastoIT_GML_Merger_Pro/issues)
+> **v0.8** — [Guida online](https://pigreco.github.io/CatastoIT_GML_Merger_Pro/) | [Releases](https://github.com/pigreco/CatastoIT_GML_Merger_Pro/releases) | [Segnala un problema](https://github.com/pigreco/CatastoIT_GML_Merger_Pro/issues)
 
 ## Descrizione generale
 **CatastoIT_GML_Merger_Pro** è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano. Il plugin permette di lavorare con file di mappa (MAP) e particelle (PLE), convertendoli nel formato GPKG e aggiungendo i campi foglio, particella, sezione censuaria e nome del comune per un'integrazione completa nei flussi di lavoro GIS.
@@ -25,6 +25,7 @@
 14. **Guida online** *(nuovo in v0.5)*: Documentazione completa su [GitHub Pages](https://pigreco.github.io/CatastoIT_GML_Merger_Pro/)
 15. **Stile predefinito PLE** *(nuovo in v0.6)*: Al caricamento in QGIS, il layer particelle viene visualizzato con renderer a regole — particelle trasparenti, strade in grigio, acque in blu
 16. **Resilienza GML non validi** *(nuovo in v0.7)*: File GML corrotti o non validi vengono automaticamente saltati con avviso nel log — il processo continua con i file validi senza interrompersi
+17. **Granularità output** *(nuovo in v0.8)*: Nuova combobox per scegliere come aggregare i file di output — unico file (comportamento classico), un file per provincia o un file per comune; nei modi multi-file i layer vengono caricati in QGIS all'interno di un gruppo dedicato nel pannello Layer
 
 ## Come utilizzare il plugin
 
@@ -35,7 +36,7 @@
 5. Seleziona il **tipo di file** da elaborare (Mappe, Particelle o Entrambi)
 6. Se lavori con Particelle, puoi attivare l'opzione **"Aggiungi Sezione Censuaria nelle Particelle"**
 7. *(Opzionale)* Attiva **"Aggiungi Nome Comune"** per includere il campo `comune` nell'output *(v0.5)*
-8. Scegli il **formato di output** (solo GPKG)
+8. Scegli il **formato di output** (solo GPKG) e la **granularità** (unico file / per provincia / per comune) *(v0.8)*
 9. Definisci la **cartella di destinazione** e i nomi dei file di output
 10. *(Opzionale)* Seleziona una **cartella temporanea** se quella di sistema ha poco spazio
 11. *(Opzionale)* Seleziona il **CRS di output** per riproiettare i dati
@@ -73,6 +74,17 @@
 - Almeno 4GB di RAM (8GB consigliati per province estese)
 - Spazio su disco sufficiente per i dati temporanei e di output
 - Python 3.7 o superiore con librerie GDAL/OGR
+
+## Test v0.8 — Granularità output
+
+| Tipo | Granularità | Filtro comuni | Output | Esito |
+|---|---|---|---|---|
+| PLE | Unico file | sì | `pll_AG_CT_A026_A896.gpkg` | ✅ |
+| PLE | Un file per provincia | sì | `pll_EN.gpkg`, `pll_SR.gpkg` | ✅ |
+| PLE | Un file per comune | sì | `pll_EN_A098.gpkg`, `pll_RG_A014.gpkg` | ✅ |
+| MAP | Unico file | sì | `map_AQ_CH_A018_A367.gpkg` | ✅ |
+| MAP | Un file per provincia | sì | `map_CL.gpkg`, `map_EN.gpkg`, `map_TP.gpkg` | ✅ |
+| MAP | Un file per comune | sì | `map_AG_F126.gpkg`, `map_ME_A194.gpkg` | ✅ |
 
 ## Disclaimer
 
