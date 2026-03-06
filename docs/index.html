@@ -239,7 +239,7 @@
   <img src="https://raw.githubusercontent.com/pigreco/CatastoIT_GML_Merger_Pro/main/img/icon_b.png" alt="icon">
   <div>
     <h1>CatastoIT GML Merger Pro</h1>
-    <small>Plugin QGIS per il download e la fusione di dati catastali italiani</small>
+    <small>Plugin QGIS per il download e la fusione di dati catastali italiani &mdash; <strong>v0.8</strong></small>
   </div>
 </header>
 
@@ -565,11 +565,11 @@ particelle_catastali_LT.gpkg</pre>
       <h3>Un file per comune <span class="badge badge-blue">Nuovo</span></h3>
       <p>
         Il plugin produce <strong>un GeoPackage separato per ogni comune</strong> elaborato.
-        Al nome base viene aggiunto il codice Belfiore del comune come suffisso.
+        Al nome base viene aggiunto il codice provincia e il codice Belfiore del comune come suffisso.
       </p>
-      <pre>particelle_catastali_H501.gpkg   ← Roma
-particelle_catastali_A662.gpkg   ← Agrigento
-particelle_catastali_F205.gpkg   ← Milano</pre>
+      <pre>particelle_catastali_RM_H501.gpkg   ← Roma (provincia RM)
+particelle_catastali_AG_A662.gpkg   ← Agrigento (provincia AG)
+particelle_catastali_MI_F205.gpkg   ← Milano (provincia MI)</pre>
       <p>
         Se l'opzione <em>Carica layer in QGIS</em> è attiva, tutti i layer vengono
         caricati all'interno di un <strong>gruppo</strong> nel pannello Layer denominato
@@ -605,7 +605,12 @@ particelle_catastali_F205.gpkg   ← Milano</pre>
     <h3>CRS</h3>
     <p>
       Il CRS nativo dei dati AdE è <strong>EPSG:6706</strong> (RDN2008 Geographic 2D – coordinate in gradi
-      decimali). Se non viene selezionata alcuna riproiezione, il GeoPackage viene salvato in EPSG:6706.
+      decimali). I GeoPackage prodotti vengono etichettati come <strong>EPSG:4326</strong> (WGS84):
+      le coordinate sono identiche a RDN2008 (differenza &lt;1 m per l'Italia), ma EPSG:4326 garantisce
+      la corretta visualizzazione in QGIS con mappe di sfondo (es. OpenStreetMap) su versioni GDAL 3.12+
+      / PROJ 9.7+ che introducono una mappatura degli assi lat/lon che causa problemi con EPSG:6706.
+    </p>
+    <p>
       Per lavorare in UTM o altri sistemi metrici, usa il widget <em>Riproietta</em>.
     </p>
     <div class="alert info">
@@ -656,11 +661,17 @@ particelle_catastali_F205.gpkg   ← Milano</pre>
     <div class="card">
       <h3>Il layer appare a (0,0) o non si vede sulla mappa</h3>
       <p>
-        Questo problema era dovuto a un CRS non assegnato nel GeoPackage prodotto.
-        Nelle versioni recenti del plugin il CRS <strong>EPSG:6706</strong> viene scritto
-        direttamente nelle tabelle SRS del GeoPackage. Se hai file prodotti da versioni
-        precedenti, usa <em>Imposta SRS layer</em> in QGIS per assegnare EPSG:6706.
+        Questo problema può avere due cause:
       </p>
+      <ul>
+        <li><strong>CRS non assegnato</strong> (versioni &lt; v0.5): usa <em>Imposta SRS layer</em>
+          in QGIS per assegnare EPSG:6706 ai file esistenti.</li>
+        <li><strong>Layer invisibile con sfondo OSM</strong> (GDAL 3.12+ / PROJ 9.7+): EPSG:6706
+          produce una mappatura degli assi lat/lon (<code>2,1</code>) che impedisce la corretta
+          riproiezione verso EPSG:3857. I file prodotti dalla <strong>v0.8</strong> sono già etichettati
+          come EPSG:4326 e non presentano questo problema. Per i file precedenti, riassegna il CRS
+          come EPSG:4326 in QGIS.</li>
+      </ul>
     </div>
 
     <div class="card">
