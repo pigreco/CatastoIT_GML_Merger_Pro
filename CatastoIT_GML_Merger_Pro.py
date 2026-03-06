@@ -543,6 +543,7 @@ class CatastoIT_GML_Merger_Pro:
         try: self.dlg.btn_close.clicked.disconnect()
         except Exception: pass
         self.dlg.cb_region.currentIndexChanged.connect(url_update)
+        url_update()
         self.dlg.cb_file_type.currentIndexChanged.connect(aggiorna_campi_output)
         self.dlg.btn_process.clicked.connect(process_gml_files)
         self.dlg.btn_close.clicked.connect(pulisci_temporanea)
