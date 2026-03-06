@@ -562,7 +562,7 @@
           <string>Comuni disponibili. Doppio clic o → per aggiungere al filtro.</string>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(226, 226, 226);</string>
+          <string notr="true">background-color: rgb(226, 226, 226); color: black;</string>
          </property>
         </widget>
        </item>
@@ -618,7 +618,7 @@
           <string>Comuni selezionati per il filtro. Doppio clic o ← per rimuovere.</string>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(255, 255, 200);</string>
+          <string notr="true">background-color: rgb(255, 255, 200); color: black;</string>
          </property>
         </widget>
        </item>
