@@ -492,7 +492,7 @@
           <string>Seleziona una o più province (CTRL+clic per selezione multipla)</string>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(226, 226, 226);</string>
+          <string notr="true">background-color: rgb(226, 226, 226); color: black;</string>
          </property>
          <property name="selectionMode">
           <enum>QAbstractItemView::MultiSelection</enum>
