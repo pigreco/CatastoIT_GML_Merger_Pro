@@ -291,7 +291,7 @@ class CatastoIT_GML_Merger_Pro:
             # Filtro comuni: legge tutti gli item di list_comuni_selezionati
             n = self.dlg.list_comuni_selezionati.count()
             if n > 0:
-                comuni_list = [self.dlg.list_comuni_selezionati.item(i).data(Qt.UserRole) for i in range(n)]
+                comuni_list = [self.dlg.list_comuni_selezionati.item(i).data(Qt.ItemDataRole.UserRole) for i in range(n)]
                 comuni_nomi = [self.dlg.list_comuni_selezionati.item(i).text() for i in range(n)]
                 inputs['comuni_filter'] = comuni_list
                 log_message(f"Filtro comuni attivo ({n}): {', '.join(comuni_nomi)}")
