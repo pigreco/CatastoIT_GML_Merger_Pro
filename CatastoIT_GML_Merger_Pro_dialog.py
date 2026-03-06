@@ -44,7 +44,7 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         super(CatastoIT_GML_Merger_ProDialog, self).__init__(parent)
         self.setupUi(self)
 
-        self.setWindowFlags(self.windowFlags() | Qt.WindowMinimizeButtonHint)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMinimizeButtonHint)
 
         # Legge la versione da metadata.txt e la mostra nel titolo
         try:
@@ -156,7 +156,7 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         for codice, nome, sigla in all_comuni:
             if codice not in selected_codes:
                 item = QListWidgetItem(f"{nome} ({sigla})")
-                item.setData(Qt.UserRole, codice)
+                item.setData(Qt.ItemDataRole.UserRole, codice)
                 self.list_comuni_disponibili.addItem(item)
 
     # ------------------------------------------------------------------ #
@@ -167,7 +167,7 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         """Restituisce il set dei codici Belfiore già in lista_selezionati."""
         codes = set()
         for i in range(self.list_comuni_selezionati.count()):
-            codes.add(self.list_comuni_selezionati.item(i).data(Qt.UserRole))
+            codes.add(self.list_comuni_selezionati.item(i).data(Qt.ItemDataRole.UserRole))
         return codes
 
     def _filter_comuni_disponibili(self, text):
@@ -181,7 +181,7 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         """Sposta un item da disponibili a selezionati."""
         self.list_comuni_disponibili.takeItem(self.list_comuni_disponibili.row(item))
         new_item = QListWidgetItem(item.text())
-        new_item.setData(Qt.UserRole, item.data(Qt.UserRole))
+        new_item.setData(Qt.ItemDataRole.UserRole, item.data(Qt.ItemDataRole.UserRole))
         self.list_comuni_selezionati.addItem(new_item)
         self._update_counter()
 
@@ -189,7 +189,7 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
         """Sposta un item da selezionati a disponibili, reinserendo in ordine."""
         self.list_comuni_selezionati.takeItem(self.list_comuni_selezionati.row(item))
         new_item = QListWidgetItem(item.text())
-        new_item.setData(Qt.UserRole, item.data(Qt.UserRole))
+        new_item.setData(Qt.ItemDataRole.UserRole, item.data(Qt.ItemDataRole.UserRole))
         self.list_comuni_disponibili.addItem(new_item)
         self.list_comuni_disponibili.sortItems()
         # Riapplica eventuale filtro di ricerca

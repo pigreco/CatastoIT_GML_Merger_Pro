@@ -35,7 +35,7 @@ from datetime import datetime, timedelta
 from zipfile import ZipFile
 
 # -- Import moduli di terze parti --
-from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator, QVariant, Qt, pyqtSignal
+from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator, Qt, pyqtSignal
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QApplication, QListWidget, QMessageBox
 from qgis.core import Qgis, QgsCoordinateReferenceSystem, QgsField, QgsMessageLog, QgsProject, QgsVectorLayer, QgsTask, QgsApplication
@@ -698,7 +698,7 @@ class GmlProcessingTask(QgsTask):
     task_completed = pyqtSignal(bool, object)
     
     def __init__(self, description, inputs):
-        super().__init__(description, QgsTask.CanCancel)
+        super().__init__(description, QgsTask.Flag.CanCancel)
         self.inputs = inputs
         self.directory_temporanea = None
         self.exception = None

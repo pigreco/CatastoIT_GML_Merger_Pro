@@ -4,7 +4,7 @@
 
 [general]
 name=CatastoIT_GML_Merger_Pro
-qgisMinimumVersion=3.22
+qgisMinimumVersion=4.0
 description=Download, estrazione e fusione file GML catastali italiani con filtro per comune
 version=0.9.2
 author=Salvatore Fiandaca, Giulio Fattori

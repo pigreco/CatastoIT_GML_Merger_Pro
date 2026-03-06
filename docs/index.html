@@ -239,7 +239,7 @@
   <img src="https://raw.githubusercontent.com/pigreco/CatastoIT_GML_Merger_Pro/main/img/icon_b.png" alt="icon">
   <div>
     <h1>CatastoIT GML Merger Pro</h1>
-    <small>Plugin QGIS per il download e la fusione di dati catastali italiani &mdash; <strong>v0.9.2</strong></small>
+    <small>Plugin QGIS 4 (Qt6) per il download e la fusione di dati catastali italiani &mdash; <strong>v0.9.2</strong></small>
   </div>
 </header>
 
@@ -265,7 +265,7 @@
   <section id="intro">
     <h2>Introduzione</h2>
     <p>
-      <strong>CatastoIT GML Merger Pro</strong> è un plugin per <strong>QGIS 3.22+</strong>
+      <strong>CatastoIT GML Merger Pro</strong> è un plugin per <strong>QGIS 4.0+</strong> (Qt6)
       che consente di scaricare, estrarre e unire automaticamente i dati catastali vettoriali
       italiani pubblicati dall'<strong>Agenzia delle Entrate (AdE)</strong> tramite il
       <a href="https://geodati.gov.it" target="_blank">RNDT (Repertorio Nazionale Dati Territoriali)</a>.
@@ -307,8 +307,9 @@
     <h3>Requisiti</h3>
     <table>
       <tr><th>Componente</th><th>Versione minima</th></tr>
-      <tr><td>QGIS</td><td>3.22+</td></tr>
-      <tr><td>Python</td><td>3.7+</td></tr>
+      <tr><td>QGIS</td><td>4.0+</td></tr>
+      <tr><td>Qt</td><td>6 (PyQt6)</td></tr>
+      <tr><td>Python</td><td>3.9+</td></tr>
       <tr><td>GDAL/OGR</td><td>incluso in QGIS</td></tr>
       <tr><td>Connessione internet</td><td>richiesta per il download</td></tr>
     </table>
@@ -702,6 +703,14 @@ particelle_catastali_MI_F205.gpkg   ← Milano (provincia MI)</pre>
         Assicurati di aver installato la versione corretta e di avere
         <strong>solo una versione</strong> del plugin nella cartella dei plugin di QGIS.
         Crea un nuovo profilo QGIS se il problema persiste.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Posso usare il plugin su QGIS 3.x?</h3>
+      <p>
+        No. Questa versione del plugin richiede <strong>QGIS 4.0+</strong> con Qt6/PyQt6.
+        Per QGIS 3.x usa l'ultima versione disponibile sul ramo <code>main</code> del repository.
       </p>
     </div>
 

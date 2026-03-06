@@ -1,6 +1,8 @@
 # Guida al plugin CatastoIT_GML_Merger_Pro per QGIS
 
-> **v0.8** — [Guida online](https://pigreco.github.io/CatastoIT_GML_Merger_Pro/) | [Releases](https://github.com/pigreco/CatastoIT_GML_Merger_Pro/releases) | [Segnala un problema](https://github.com/pigreco/CatastoIT_GML_Merger_Pro/issues)
+> **v0.9.2** — [Guida online](https://pigreco.github.io/CatastoIT_GML_Merger_Pro/) | [Releases](https://github.com/pigreco/CatastoIT_GML_Merger_Pro/releases) | [Segnala un problema](https://github.com/pigreco/CatastoIT_GML_Merger_Pro/issues)
+
+> ⚠️ **Questa versione richiede QGIS 4.0+ con Qt6.** Per QGIS 3.x usa la versione precedente (ramo `main`).
 
 ## Descrizione generale
 **CatastoIT_GML_Merger_Pro** è un plugin avanzato per QGIS che consente di scaricare, estrarre e unire file GML del catasto italiano. Il plugin permette di lavorare con file di mappa (MAP) e particelle (PLE), convertendoli nel formato GPKG e aggiungendo i campi foglio, particella, sezione censuaria e nome del comune per un'integrazione completa nei flussi di lavoro GIS.
@@ -26,6 +28,7 @@
 15. **Stile predefinito PLE** *(nuovo in v0.6)*: Al caricamento in QGIS, il layer particelle viene visualizzato con renderer a regole — particelle trasparenti, strade in grigio, acque in blu
 16. **Resilienza GML non validi** *(nuovo in v0.7)*: File GML corrotti o non validi vengono automaticamente saltati con avviso nel log — il processo continua con i file validi senza interrompersi
 17. **Granularità output** *(nuovo in v0.8)*: Nuova combobox per scegliere come aggregare i file di output — unico file (comportamento classico), un file per provincia o un file per comune; nei modi multi-file i layer vengono caricati in QGIS all'interno di un gruppo dedicato nel pannello Layer
+18. **Compatibilità QGIS 4 / Qt6** *(nuovo in v0.10)*: Porting completo a Qt6/PyQt6 — import aggiornati, enum scoped (`Qt.ItemDataRole.UserRole`, `Qt.WindowType.*`, `QgsTask.Flag.*`), rimosso `QVariant`
 
 ## Come utilizzare il plugin
 
@@ -69,11 +72,11 @@
 - I dati vengono forniti nel sistema di coordinate (CRS) scelto dall'utente durante l'elaborazione
 
 ## Requisiti di sistema
-- QGIS 3.22 o superiore
+- QGIS 4.0 o superiore (Qt6 / PyQt6)
 - Connessione internet per il download dei dati
 - Almeno 4GB di RAM (8GB consigliati per province estese)
 - Spazio su disco sufficiente per i dati temporanei e di output
-- Python 3.7 o superiore con librerie GDAL/OGR
+- Python 3.9 o superiore con librerie GDAL/OGR
 
 ## Test v0.8 — Granularità output
 
