@@ -8,3 +8,6 @@
 _state_
 *.pyc
 __pycache__/
+
+# ZIP release (generati localmente per upload, non vanno nel repo)
+*.zip
