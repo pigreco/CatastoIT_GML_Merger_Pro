@@ -37,7 +37,7 @@ from zipfile import ZipFile
 # -- Import moduli di terze parti --
 from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator, QVariant, Qt, pyqtSignal
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QApplication, QListWidget
+from qgis.PyQt.QtWidgets import QAction, QApplication, QListWidget, QMessageBox
 from qgis.core import Qgis, QgsCoordinateReferenceSystem, QgsField, QgsMessageLog, QgsProject, QgsVectorLayer, QgsTask, QgsApplication
 import processing
 
@@ -295,6 +295,24 @@ class CatastoIT_GML_Merger_Pro:
                 comuni_nomi = [self.dlg.list_comuni_selezionati.item(i).text() for i in range(n)]
                 inputs['comuni_filter'] = comuni_list
                 log_message(f"Filtro comuni attivo ({n}): {', '.join(comuni_nomi)}")
+
+                # Controlla che le province dei comuni selezionati siano tutte selezionate
+                province_mancanti = set()
+                for belfiore in comuni_list:
+                    info = COMUNI_BY_CODE.get(belfiore.upper())
+                    if info:
+                        _, sigla = info
+                        if sigla.upper() not in province_codes:
+                            province_mancanti.add(sigla.upper())
+                if province_mancanti:
+                    elenco = ', '.join(sorted(province_mancanti))
+                    QMessageBox.warning(
+                        self.dlg,
+                        "Province mancanti",
+                        f"I comuni selezionati appartengono a province non selezionate: {elenco}.\n\n"
+                        f"Seleziona anche queste province prima di procedere."
+                    )
+                    return None
             else:
                 inputs['comuni_filter'] = []
 
