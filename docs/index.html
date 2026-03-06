@@ -239,7 +239,7 @@
   <img src="https://raw.githubusercontent.com/pigreco/CatastoIT_GML_Merger_Pro/main/img/icon_b.png" alt="icon">
   <div>
     <h1>CatastoIT GML Merger Pro</h1>
-    <small>Plugin QGIS per il download e la fusione di dati catastali italiani &mdash; <strong>v0.8</strong></small>
+    <small>Plugin QGIS per il download e la fusione di dati catastali italiani &mdash; <strong>v0.9.2</strong></small>
   </div>
 </header>
 
@@ -518,12 +518,10 @@
       della/delle province scelte.
     </div>
     <div class="alert">
-      <strong>Attenzione:</strong> le province devono rimanere selezionate nell'elenco province
-      per tutta la durata della configurazione. Se deselezioni una provincia dopo aver spostato
-      dei suoi comuni nella lista <em>Selezionati</em>, quei comuni <strong>non verranno elaborati</strong>
-      perché il download avviene solo per le province selezionate al momento dell'avvio.
-      Verifica sempre che le province dei comuni selezionati siano evidenziate nell'elenco province
-      prima di cliccare <em>Elabora</em>.
+      <strong>Attenzione:</strong> le province dei comuni selezionati devono essere selezionate
+      anche nell'elenco province. Se clicchi <em>Elabora</em> con comuni selezionati le cui province
+      non sono spuntate, il plugin mostra un avviso che elenca le province mancanti e blocca
+      l'avvio fino a quando non le selezioni.
     </div>
     <h3>Suffisso nel nome file</h3>
     <p>
