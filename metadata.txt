@@ -40,6 +40,9 @@ icon=icon.png
 # experimental flag
 experimental=False
 
+# Qt6 / QGIS 4 compatibility
+supportsQt6=True
+
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False
 
