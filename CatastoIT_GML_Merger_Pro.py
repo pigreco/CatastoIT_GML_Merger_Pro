@@ -379,8 +379,6 @@ class CatastoIT_GML_Merger_Pro:
                 # Inizializza lo stato di elaborazione
                 self.processing_active = True
                 
-                # Abilita il pulsante di stop e disabilita quello di processo
-                self.dlg.btn_stop.setEnabled(True)
                 self.dlg.btn_process.setEnabled(False)
                 
                 inputs = collect_inputs()
@@ -544,32 +542,17 @@ class CatastoIT_GML_Merger_Pro:
         except Exception: pass
         try: self.dlg.btn_close.clicked.disconnect()
         except Exception: pass
-        try: self.dlg.btn_stop.clicked.disconnect()
-        except Exception: pass
-
         self.dlg.cb_region.currentIndexChanged.connect(url_update)
         self.dlg.cb_file_type.currentIndexChanged.connect(aggiorna_campi_output)
         self.dlg.btn_process.clicked.connect(process_gml_files)
         self.dlg.btn_close.clicked.connect(pulisci_temporanea)
-        self.dlg.btn_stop.clicked.connect(self.stop_processing)
-        self.dlg.btn_stop.setEnabled(False)
         
         # Imposta lo stato iniziale dei campi di output
         aggiorna_campi_output()
 
-    def stop_processing(self):
-        """Interrompe il processo di elaborazione in corso"""
-        if self.processing_active and self.current_task:
-            self.processing_active = False
-            self.current_task.cancel()
-            self.dlg.text_log.append("\n<span style='color:red;font-weight:bold;'>Interruzione richiesta dall'utente...</span>")
-            self.dlg.text_log.append("L'elaborazione verrà interrotta appena possibile")
-            self.dlg.btn_stop.setEnabled(False)
-    
     def reset_processing_state(self):
         """Ripristina lo stato dell'interfaccia dopo l'elaborazione"""
         self.processing_active = False
-        self.dlg.btn_stop.setEnabled(False)
         self.dlg.btn_process.setEnabled(True)
     
     def safe_cleanup_and_close(self, cleanup_func):

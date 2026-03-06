@@ -271,7 +271,7 @@
          </property>
          <property name="icon">
           <iconset>
-           <normaloff>:/qt-project.org/styles/commonstyle/images/help-32.png</normaloff>:/qt-project.org/styles/commonstyle/images/help-32.png</iconset>
+           <normaloff>:/images/themes/default/mActionHelpContents.svg</normaloff>:/images/themes/default/mActionHelpContents.svg</iconset>
          </property>
          <property name="iconSize">
           <size>
@@ -302,32 +302,6 @@
        </property>
        <property name="placeholderText">
         <string>Solo nome file (es. mappe_catastali)</string>
-       </property>
-      </widget>
-     </item>
-     <item row="18" column="1" alignment="Qt::AlignRight">
-      <widget class="QPushButton" name="btn_stop">
-       <property name="maximumSize">
-        <size>
-         <width>200</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>Ferma elaborazione in corso!</string>
-       </property>
-       <property name="layoutDirection">
-        <enum>Qt::LeftToRight</enum>
-       </property>
-       <property name="autoFillBackground">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>STOP!</string>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>:/qt-project.org/styles/commonstyle/images/stop-32.png</normaloff>:/qt-project.org/styles/commonstyle/images/stop-32.png</iconset>
        </property>
       </widget>
      </item>
