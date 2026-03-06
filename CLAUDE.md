@@ -87,4 +87,5 @@ If modifying UI or resources, use QGIS development tools:
 - Plugin metadata in `metadata.txt` defines QGIS compatibility — **single source of truth for version**
 - Regional data URLs are hardcoded in processing logic
 - `.env` file stores `GITHUB_TOKEN` (not tracked by git)
+- **REGOLA SICUREZZA**: per qualsiasi comando curl verso le API GitHub, caricare SEMPRE il token con `export $(grep -v '^#' .env | xargs)` e usare `$GITHUB_TOKEN` — mai hardcodare il valore letterale del token nei comandi
 - Plugin creates temporary directories during processing with automatic cleanup on dialog close
