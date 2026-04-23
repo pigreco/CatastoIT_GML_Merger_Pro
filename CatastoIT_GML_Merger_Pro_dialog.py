@@ -35,7 +35,7 @@ from .regions import REGIONS, get_provinces
 from .comuni import get_comuni_by_province
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'CatastoIT_GML_Merger_Pro_dialog_base.ui'), resource_suffix='')
+    os.path.dirname(__file__), 'CatastoIT_GML_Merger_Pro_dialog_base.ui'))
 
 
 class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
