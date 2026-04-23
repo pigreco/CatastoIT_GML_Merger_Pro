@@ -492,7 +492,7 @@
           <string>Seleziona una o più province (CTRL+clic per selezione multipla)</string>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(226, 226, 226);</string>
+          <string notr="true">background-color: rgb(226, 226, 226); color: #1a1a1a;</string>
          </property>
          <property name="selectionMode">
           <enum>QAbstractItemView::MultiSelection</enum>
@@ -562,7 +562,7 @@
           <string>Comuni disponibili. Doppio clic o → per aggiungere al filtro.</string>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(226, 226, 226);</string>
+          <string notr="true">background-color: rgb(226, 226, 226); color: #1a1a1a;</string>
          </property>
         </widget>
        </item>
@@ -618,7 +618,7 @@
           <string>Comuni selezionati per il filtro. Doppio clic o ← per rimuovere.</string>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(255, 255, 200);</string>
+          <string notr="true">background-color: rgb(255, 255, 200); color: #1a1a1a;</string>
          </property>
         </widget>
        </item>

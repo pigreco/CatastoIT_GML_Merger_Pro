@@ -36,7 +36,7 @@ from datetime import datetime, timedelta
 from zipfile import ZipFile
 
 # -- Import moduli di terze parti --
-from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator, QVariant, Qt, pyqtSignal
+from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator, Qt, pyqtSignal
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QApplication, QListWidget, QMessageBox
 from qgis.core import Qgis, QgsCoordinateReferenceSystem, QgsField, QgsMessageLog, QgsProject, QgsVectorLayer, QgsTask, QgsApplication
@@ -292,7 +292,7 @@ class CatastoIT_GML_Merger_Pro:
             # Filtro comuni: legge tutti gli item di list_comuni_selezionati
             n = self.dlg.list_comuni_selezionati.count()
             if n > 0:
-                comuni_list = [self.dlg.list_comuni_selezionati.item(i).data(Qt.UserRole) for i in range(n)]
+                comuni_list = [self.dlg.list_comuni_selezionati.item(i).data(Qt.ItemDataRole.UserRole) for i in range(n)]
                 comuni_nomi = [self.dlg.list_comuni_selezionati.item(i).text() for i in range(n)]
                 inputs['comuni_filter'] = comuni_list
                 log_message(f"Filtro comuni attivo ({n}): {', '.join(comuni_nomi)}")
@@ -699,7 +699,7 @@ class GmlProcessingTask(QgsTask):
     task_completed = pyqtSignal(bool, object)
     
     def __init__(self, description, inputs):
-        super().__init__(description, QgsTask.CanCancel)
+        super().__init__(description, QgsTask.Flag.CanCancel if hasattr(QgsTask, 'Flag') else QgsTask.CanCancel)
         self.inputs = inputs
         self.directory_temporanea = None
         self.exception = None

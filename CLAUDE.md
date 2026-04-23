@@ -12,19 +12,19 @@ This is a QGIS plugin built using the PyQt framework following the standard QGIS
 
 ### Core Components
 
-- **CatastoIT_GML_Merger_Pro.py**: Main plugin class that handles QGIS integration, toolbar/menu setup, and orchestrates the data processing workflow
-- **CatastoIT_GML_Merger_Pro_dialog.py**: UI dialog class that manages the user interface built from the .ui file
-- **CatastoIT_GML_Merger_Pro_dialog_base.ui**: Qt Designer UI file defining the plugin's graphical interface
-- **regions.py**: Data module containing Italian regions and provinces mapping (REGIONS list and PROVINCES_BY_REGION dictionary)
-- **comuni.py**: Lookup table for 7904 comuni × 107 province (codice Belfiore → nome, sigla provincia)
-- **resources.py**: Qt resource file generated from .qrc files containing embedded resources
-- **__init__.py**: Plugin initialization and metadata
+- **CatastoIT_GML_Merger_Pro.py**: Contains two classes — `CatastoIT_GML_Merger_Pro` (QGIS entry point: toolbar, menu, `run()`) and `GmlProcessingTask(QgsTask)` (all background processing: download, extraction, merge, field calc, CRS fix). All GPKG manipulation inside `GmlProcessingTask` must use pure sqlite3, never `QgsVectorLayer`.
+- **CatastoIT_GML_Merger_Pro_dialog.py**: UI dialog class built from the .ui file; handles region/province/comuni widgets, transfer widget logic, and user input collection.
+- **CatastoIT_GML_Merger_Pro_dialog_base.ui**: Qt Designer UI file — edit with Qt Designer, do not hand-edit.
+- **regions.py**: Italian regions and provinces mapping (REGIONS list and PROVINCES_BY_REGION dictionary).
+- **comuni.py**: Lookup table for 7904 comuni × 107 province (codice Belfiore → nome, sigla provincia).
+- **resources.py**: Qt resource binary — compiled from PyQt5's `pyrcc5`, uses `from qgis.PyQt import QtCore` for Qt6 compatibility. Contains only the toolbar icon (icon.png). Do not regenerate unless the icon changes.
+- **__init__.py**: Plugin initialization and metadata.
 
 ### Key Data Processing Flow
 
 1. **Download**: Fetches regional ZIP files from geodati.gov.it URLs
 2. **Extraction**: Decompresses province and municipality ZIP files with memory optimization
-3. **Merging**: Combines GML files into unified datasets using 3-level fallback strategy
+3. **Merging**: Combines GML files using a 3-level fallback: (1) `native:mergevectorlayers` on all valid files at once; (2) `merge_files_alternative` — batch merge in chunks of 10, with per-batch fallback to GDAL; (3) individual files collected directly if both strategies fail.
 4. **Field calculation**: Adds foglio, particella, sez_censuaria, comune via pure sqlite3 (thread-safe)
 5. **CRS fix**: Labels GPKG as EPSG:4326 to fix axis order issue with GDAL 3.12+/PROJ 9.7+
 6. **Loading**: Optionally loads results into QGIS with predefined styling
@@ -55,6 +55,8 @@ This is a QGIS plugin built using the PyQt framework following the standard QGIS
 - Destroying `QgsVectorLayer` in a `QgsTask` background thread causes access violation on Windows.
   Fix: use pure sqlite3 for all GPKG manipulation in background tasks.
 - Signal connections in `run()` must be disconnected before reconnecting to prevent duplicate task spawning.
+- `reproject_layer()` writes a new file with CRS suffix (e.g. `output_EPSG_32632.gpkg`) — it does not reproject in-place. The caller must handle the returned path.
+- `QgsVectorLayer` is used in the background thread only for validating GML source files before merge (read-only, not stored). All write/modify operations on GPKG go through sqlite3.
 
 ## Development Commands
 
@@ -71,9 +73,17 @@ This is a QGIS plugin project with no build system or testing framework. Develop
 - Verify GPKG output, field calculations, and layer visibility with OSM background
 
 ### Resource Compilation
-If modifying UI or resources, use QGIS development tools:
-- `pyrcc5 -o resources.py resources.qrc` (if resources.qrc exists)
-- Qt Designer for editing .ui files
+Only needed if `icon.png` changes — `resources.py` contains the compiled icon binary:
+- `pyrcc5 -o resources.py resources.qrc`
+- The output uses `from qgis.PyQt import QtCore` (not `from PyQt5 import QtCore`) for Qt6 compatibility — verify after regenerating.
+- Qt Designer for editing `CatastoIT_GML_Merger_Pro_dialog_base.ui`
+
+### Releasing
+Load the GitHub token before any `curl`/`gh` API call:
+```bash
+export $(grep -v '^#' .env | xargs)
+```
+Bump `version=` in `metadata.txt` (single source of truth) and update `changelog=` before tagging.
 
 ## Key Dependencies
 
@@ -85,7 +95,7 @@ If modifying UI or resources, use QGIS development tools:
 ## Configuration Notes
 
 - Plugin metadata in `metadata.txt` defines QGIS compatibility — **single source of truth for version**
-- Regional data URLs are hardcoded in processing logic
-- `.env` file stores `GITHUB_TOKEN` (not tracked by git)
-- **REGOLA SICUREZZA**: per qualsiasi comando curl verso le API GitHub, caricare SEMPRE il token con `export $(grep -v '^#' .env | xargs)` e usare `$GITHUB_TOKEN` — mai hardcodare il valore letterale del token nei comandi
+- Regional data URLs are hardcoded in `GmlProcessingTask.run()` (no config file)
+- `.env` file stores `GITHUB_TOKEN` (not tracked by git) — load with `export $(grep -v '^#' .env | xargs)` before any GitHub API call; never hardcode the token value
 - Plugin creates temporary directories during processing with automatic cleanup on dialog close
+- `ple_style.qml` is applied to PLE layers at load time; contains rule-based renderer (transparent parcels, grey roads, blue water)
