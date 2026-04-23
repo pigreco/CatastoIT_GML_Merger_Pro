@@ -1241,14 +1241,14 @@ class GmlProcessingTask(QgsTask):
                                 pass  # colonna già presente
 
                         # Verifica esistenza ADMINISTRATIVEUNIT
-                        has_au = c.execute(  # nosec B608 — table_name da sqlite_master, non da input utente
-                            f"SELECT COUNT(*) FROM pragma_table_info(\"{table_name}\") WHERE name='ADMINISTRATIVEUNIT'"
+                        has_au = c.execute(
+                            f"SELECT COUNT(*) FROM pragma_table_info(\"{table_name}\") WHERE name='ADMINISTRATIVEUNIT'"  # nosec B608 — table_name da sqlite_master, non da input utente
                         ).fetchone()[0] > 0
 
                         # Leggi tutti i record in una sola query
                         au_col = '"ADMINISTRATIVEUNIT"' if has_au else 'NULL'
-                        rows = c.execute(  # nosec B608 — table_name da sqlite_master, non da input utente
-                            f'SELECT fid, gml_id, {au_col} FROM "{table_name}"'
+                        rows = c.execute(
+                            f'SELECT fid, gml_id, {au_col} FROM "{table_name}"'  # nosec B608 — table_name da sqlite_master, non da input utente
                         ).fetchall()
 
                         # Drop trigger R-tree che chiamano ST_IsEmpty (non disponibile
@@ -1288,8 +1288,8 @@ class GmlProcessingTask(QgsTask):
                             vals.append(fid)
                             updates.append(tuple(vals))
 
-                        c.executemany(  # nosec B608 — table_name da sqlite_master, non da input utente
-                            f'UPDATE "{table_name}" SET {set_clause} WHERE fid=?', updates
+                        c.executemany(
+                            f'UPDATE "{table_name}" SET {set_clause} WHERE fid=?', updates  # nosec B608 — table_name da sqlite_master, non da input utente
                         )
                         self.log_message.emit(f"Campi calcolati correttamente per il layer {file_type}")
 
