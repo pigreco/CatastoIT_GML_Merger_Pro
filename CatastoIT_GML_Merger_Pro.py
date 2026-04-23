@@ -31,6 +31,7 @@ import sqlite3
 import tempfile
 import time
 import urllib.request
+import urllib.parse
 from datetime import datetime, timedelta
 from zipfile import ZipFile
 
@@ -736,7 +737,10 @@ class GmlProcessingTask(QgsTask):
             self.setProgress(5)  # 5% dopo inizializzazione
             
             main_zip_path = os.path.join(temp_dir, "downloaded.zip")
-            with urllib.request.urlopen(self.inputs["url"], timeout=120) as response:
+            _parsed = urllib.parse.urlparse(self.inputs["url"])
+            if _parsed.scheme not in ("http", "https"):
+                raise ValueError(f"Schema URL non consentito: {_parsed.scheme!r}")
+            with urllib.request.urlopen(self.inputs["url"], timeout=120) as response:  # nosec B310
                 with open(main_zip_path, 'wb') as out_file:
                     shutil.copyfileobj(response, out_file)
             
@@ -1237,13 +1241,13 @@ class GmlProcessingTask(QgsTask):
                                 pass  # colonna già presente
 
                         # Verifica esistenza ADMINISTRATIVEUNIT
-                        has_au = c.execute(
+                        has_au = c.execute(  # nosec B608 — table_name da sqlite_master, non da input utente
                             f"SELECT COUNT(*) FROM pragma_table_info(\"{table_name}\") WHERE name='ADMINISTRATIVEUNIT'"
                         ).fetchone()[0] > 0
 
                         # Leggi tutti i record in una sola query
                         au_col = '"ADMINISTRATIVEUNIT"' if has_au else 'NULL'
-                        rows = c.execute(
+                        rows = c.execute(  # nosec B608 — table_name da sqlite_master, non da input utente
                             f'SELECT fid, gml_id, {au_col} FROM "{table_name}"'
                         ).fetchall()
 
@@ -1284,7 +1288,7 @@ class GmlProcessingTask(QgsTask):
                             vals.append(fid)
                             updates.append(tuple(vals))
 
-                        c.executemany(
+                        c.executemany(  # nosec B608 — table_name da sqlite_master, non da input utente
                             f'UPDATE "{table_name}" SET {set_clause} WHERE fid=?', updates
                         )
                         self.log_message.emit(f"Campi calcolati correttamente per il layer {file_type}")
