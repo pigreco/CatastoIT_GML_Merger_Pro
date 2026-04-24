@@ -7,7 +7,7 @@ name=CatastoIT_GML_Merger_Pro
 qgisMinimumVersion=3.22
 qgisMaximumVersion=4.99
 description=Download, estrazione e fusione file GML catastali italiani con filtro per comune
-version=0.9.5
+version=0.9.6
 author=Salvatore Fiandaca, Giulio Fattori
 email=pigrecoinfinito@gmail.com
 
@@ -22,7 +22,8 @@ repository=https://github.com/pigreco/CatastoIT_GML_Merger_Pro
 # Recommended items:
 
 hasProcessingProvider=no
-changelog= v 0.9.5 Fix Bandit B608: commenti nosec spostati sulla riga dell'f-string (erano su c.execute()) — issue #46
+changelog= v 0.9.6 Fix SyntaxError su QGIS 3.x/PyQt5: rimossa property options dal .ui, impostata programmaticamente con compat Qt5/Qt6 — issue #48
+	v 0.9.5 Fix Bandit B608: commenti nosec spostati sulla riga dell'f-string (erano su c.execute()) — issue #46
 	v 0.9.4 Port Qt6/PyQt6: enum qualificati (Qt.ItemDataRole, Qt.WindowType, QgsTask.Flag), rimosso QVariant inutilizzato, fix tema scuro su list widget nel .ui, aggiunto qgisMaximumVersion=4.99
 	v 0.1 Scarica set particelle e mappe catastali per regione in formato GPKG
 	v 0.2 Aggiunta estrazione sezione censuaria nelle particelle

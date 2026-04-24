@@ -28,7 +28,7 @@ import sys
 sys.path.append(os.path.dirname(__file__))
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
-from qgis.PyQt.QtWidgets import QPushButton, QListWidgetItem
+from qgis.PyQt.QtWidgets import QPushButton, QListWidgetItem, QFileDialog
 from qgis.PyQt.QtCore import Qt, QUrl
 from qgis.PyQt.QtGui import QDesktopServices
 from .regions import REGIONS, get_provinces
@@ -62,6 +62,13 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
             self.btn_cancel.setVisible(False)
             self.btn_cancel.clicked.connect(self.cancel_operation)
             self.layout().addWidget(self.btn_cancel)
+
+        try:
+            _show_dirs_only = QFileDialog.Option.ShowDirsOnly  # Qt6/PyQt6
+        except AttributeError:
+            _show_dirs_only = QFileDialog.ShowDirsOnly  # Qt5/PyQt5
+        self.le_folder.setOptions(_show_dirs_only)
+        self.le_temp_folder.setOptions(_show_dirs_only)
 
         self.le_folder.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\destinazione")
         self.le_temp_folder.lineEdit().setPlaceholderText("ES: C:\\Users\\<nome utente>\\Downloads\\temporaneo (opzionale - usa cartella di sistema se vuoto)")

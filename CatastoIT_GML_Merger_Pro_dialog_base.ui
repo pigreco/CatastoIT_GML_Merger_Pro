@@ -203,9 +203,6 @@
        <property name="storageMode">
         <enum>QgsFileWidget::GetDirectory</enum>
        </property>
-       <property name="options">
-        <set>QFileDialog::Option::ShowDirsOnly</set>
-       </property>
        <property name="fileWidgetButtonIcon" stdset="0">
         <iconset>
          <normaloff>:/qt-project.org/styles/commonstyle/images/newdirectory-128.png</normaloff>:/qt-project.org/styles/commonstyle/images/newdirectory-128.png</iconset>
@@ -651,9 +648,6 @@
        </property>
        <property name="storageMode">
         <enum>QgsFileWidget::GetDirectory</enum>
-       </property>
-       <property name="options">
-        <set>QFileDialog::Option::ShowDirsOnly</set>
        </property>
        <property name="fileWidgetButtonIcon" stdset="0">
         <iconset>
