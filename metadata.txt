@@ -7,7 +7,7 @@ name=CatastoIT_GML_Merger_Pro
 qgisMinimumVersion=3.22
 qgisMaximumVersion=4.99
 description=Download, estrazione e fusione file GML catastali italiani con filtro per comune
-version=1.0.2
+version=1.0.3
 author=Salvatore Fiandaca, Giulio Fattori
 email=pigrecoinfinito@gmail.com
 
@@ -22,7 +22,8 @@ repository=https://github.com/pigreco/CatastoIT_GML_Merger_Pro
 # Recommended items:
 
 hasProcessingProvider=no
-changelog= v 1.0.2 Fix province Sardegna ed Emilia-Romagna: aggiunta provincia SU (Sud Sardegna, mancante dalla GUI dal 2016) e corretta sigla Forlì-Cesena in regions.py (era erroneamente FO, ora FC come da targa/ISTAT) — issue #50, #51
+changelog= v 1.0.3 Fix Bandit B110/B112 (try/except/pass e try/except/continue) segnalati dal repository ufficiale QGIS: aggiunti commenti nosec con giustificazione sulle 12 righe interessate (pulizia layer/directory temporanea, disconnessione segnali, ALTER TABLE, titolo versione) — sblocco stato Blocked
+	v 1.0.2 Fix province Sardegna ed Emilia-Romagna: aggiunta provincia SU (Sud Sardegna, mancante dalla GUI dal 2016) e corretta sigla Forlì-Cesena in regions.py (era erroneamente FO, ora FC come da targa/ISTAT) — issue #50, #51
 	v 1.0.1 Release stabile per il repository ufficiale QGIS: consolida il port Qt6/PyQt6 (QGIS 4) e le fix di sicurezza Bandit (B310 urlopen, B608 SQL interne) già introdotte in 0.9.3/0.9.5 — sblocco stato Blocked
 	v 0.9.6 Fix SyntaxError su QGIS 3.x/PyQt5: rimossa property options dal .ui, impostata programmaticamente con compat Qt5/Qt6 — issue #48
 	v 0.9.5 Fix Bandit B608: commenti nosec spostati sulla riga dell'f-string (erano su c.execute()) — issue #46

@@ -54,7 +54,7 @@ class CatastoIT_GML_Merger_ProDialog(QtWidgets.QDialog, FORM_CLASS):
             version = cfg.get('general', 'version', fallback='')
             if version:
                 self.setWindowTitle(f"Catasto IT GML Merger Pro - v{version}")
-        except Exception:
+        except Exception:  # nosec B110 — versione nel titolo è solo cosmetica, non deve bloccare l'apertura del dialog
             pass
 
         if not hasattr(self, 'btn_cancel'):
