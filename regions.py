@@ -15,7 +15,7 @@ PROVINCES_BY_REGION = {
     
     "CAMPANIA": ["AV", "BN", "CE", "NA", "SA"],
     
-    "EMILIA-ROMAGNA": ["BO", "FE", "FO", "MO", "PR", "PC", "RA", "RE", "RN"],
+    "EMILIA-ROMAGNA": ["BO", "FE", "FC", "MO", "PR", "PC", "RA", "RE", "RN"],
     
     "FRIULI-VENEZIA-GIULIA": ["GO", "PN", "TS", "UD"],
     
@@ -33,7 +33,7 @@ PROVINCES_BY_REGION = {
     
     "PUGLIA": ["BA", "BR", "FG", "LE", "TA"],
     
-    "SARDEGNA": ["CA", "NU", "OR", "SS"],
+    "SARDEGNA": ["CA", "NU", "OR", "SS", "SU"],
     
     "SICILIA": ["AG", "CL", "CT", "EN", "ME", "PA", "RG", "SR", "TP"],
     
@@ -52,7 +52,7 @@ PROVINCE_CODES_TO_NAMES = {
     "MT": "Matera", "PZ": "Potenza",
     "CZ": "Catanzaro", "CS": "Cosenza", "KR": "Crotone", "RC": "Reggio Calabria", "VV": "Vibo Valentia",
     "AV": "Avellino", "BN": "Benevento", "CE": "Caserta", "NA": "Napoli", "SA": "Salerno",
-    "BO": "Bologna", "FE": "Ferrara", "FO": "Forlì-Cesena", "MO": "Modena", "PR": "Parma", 
+    "BO": "Bologna", "FE": "Ferrara", "FC": "Forlì-Cesena", "MO": "Modena", "PR": "Parma",
     "PC": "Piacenza", "RA": "Ravenna", "RE": "Reggio Emilia", "RN": "Rimini",
     "GO": "Gorizia", "PN": "Pordenone", "TS": "Trieste", "UD": "Udine",
     "FR": "Frosinone", "LT": "Latina", "RI": "Rieti", "RM": "Roma", "VT": "Viterbo",
