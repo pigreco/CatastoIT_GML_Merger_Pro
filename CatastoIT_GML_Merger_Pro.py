@@ -447,7 +447,7 @@ class CatastoIT_GML_Merger_Pro:
                                 if layer and hasattr(layer, 'source') and layer.source():
                                     if dir_path in layer.source():
                                         layers_to_remove.append(layer_id)
-                            except Exception:
+                            except Exception:  # nosec B112 — pulizia best-effort, un layer non valido non deve bloccare gli altri
                                 # Ignora errori su singoli layer
                                 continue
                         
@@ -455,7 +455,7 @@ class CatastoIT_GML_Merger_Pro:
                         for layer_id in layers_to_remove:
                             try:
                                 project.removeMapLayer(layer_id)
-                            except Exception:
+                            except Exception:  # nosec B112 — pulizia best-effort, un layer già rimosso non deve bloccare gli altri
                                 continue
                                 
                         if layers_to_remove:
@@ -468,7 +468,7 @@ class CatastoIT_GML_Merger_Pro:
                     try:
                         gc.collect()
                         time.sleep(0.5)  # Ridotto il tempo di attesa
-                    except Exception:
+                    except Exception:  # nosec B110 — gc.collect()/sleep non devono mai bloccare la pulizia della directory
                         pass
                     
                     # Prova a rimuovere la directory
@@ -487,7 +487,7 @@ class CatastoIT_GML_Merger_Pro:
                                         file_path = os.path.join(root, file)
                                         if os.path.exists(file_path):
                                             os.remove(file_path)
-                                    except Exception:
+                                    except Exception:  # nosec B112 — pulizia manuale best-effort, un file bloccato non deve fermare il resto
                                         continue
                                 # Rimuovi le directory vuote
                                 for dir_name in dirs:
@@ -495,7 +495,7 @@ class CatastoIT_GML_Merger_Pro:
                                         dir_to_remove = os.path.join(root, dir_name)
                                         if os.path.exists(dir_to_remove):
                                             os.rmdir(dir_to_remove)
-                                    except Exception:
+                                    except Exception:  # nosec B112 — pulizia manuale best-effort, una directory non vuota non deve fermare il resto
                                         continue
                             # Rimuovi la directory principale
                             if os.path.exists(dir_path):
@@ -554,13 +554,13 @@ class CatastoIT_GML_Merger_Pro:
         # Disconnetti segnali prima di riconnetterli per evitare connessioni duplicate
         # (run() viene chiamata ad ogni apertura del plugin, non solo alla prima)
         try: self.dlg.cb_region.currentIndexChanged.disconnect(url_update)
-        except Exception: pass
+        except Exception: pass  # nosec B110 — segnale non ancora connesso alla prima apertura del plugin
         try: self.dlg.cb_file_type.currentIndexChanged.disconnect(aggiorna_campi_output)
-        except Exception: pass
+        except Exception: pass  # nosec B110 — segnale non ancora connesso alla prima apertura del plugin
         try: self.dlg.btn_process.clicked.disconnect()
-        except Exception: pass
+        except Exception: pass  # nosec B110 — segnale non ancora connesso alla prima apertura del plugin
         try: self.dlg.btn_close.clicked.disconnect()
-        except Exception: pass
+        except Exception: pass  # nosec B110 — segnale non ancora connesso alla prima apertura del plugin
         self.dlg.cb_region.currentIndexChanged.connect(url_update)
         url_update()
         self.dlg.cb_file_type.currentIndexChanged.connect(aggiorna_campi_output)
@@ -594,7 +594,7 @@ class CatastoIT_GML_Merger_Pro:
                 self.dlg.cb_format.setCurrentIndex(0)
                 self.dlg.cb_region.setCurrentIndex(0)
                 self.dlg.text_log.append("Interfaccia resettata - pulizia file parziale")
-            except Exception:
+            except Exception:  # nosec B110 — ultimo fallback di reset UI, già dentro un except per pulizia fallita: non c'è altro da fare
                 pass
         
         # Non chiudere automaticamente il dialog per evitare crash
@@ -1237,7 +1237,7 @@ class GmlProcessingTask(QgsTask):
                         for col_name, col_type in cols:
                             try:
                                 c.execute(f'ALTER TABLE "{table_name}" ADD COLUMN "{col_name}" {col_type}')
-                            except Exception:
+                            except Exception:  # nosec B110 — sqlite3 non ha "ADD COLUMN IF NOT EXISTS": fallisce solo se la colonna è già presente
                                 pass  # colonna già presente
 
                         # Verifica esistenza ADMINISTRATIVEUNIT
