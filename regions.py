@@ -33,7 +33,7 @@ PROVINCES_BY_REGION = {
     
     "PUGLIA": ["BA", "BR", "FG", "LE", "TA"],
     
-    "SARDEGNA": ["CA", "NU", "OR", "SS", "SU"],
+    "SARDEGNA": ["CA", "NU", "OR", "SS"],
     
     "SICILIA": ["AG", "CL", "CT", "EN", "ME", "PA", "RG", "SR", "TP"],
     
@@ -64,7 +64,7 @@ PROVINCE_CODES_TO_NAMES = {
     "AL": "Alessandria", "AT": "Asti", "BI": "Biella", "CN": "Cuneo", "NO": "Novara", 
     "TO": "Torino", "VB": "Verbano-Cusio-Ossola", "VC": "Vercelli",
     "BA": "Bari", "BT": "Barletta-Andria-Trani", "BR": "Brindisi", "FG": "Foggia", "LE": "Lecce", "TA": "Taranto",
-    "CA": "Cagliari", "NU": "Nuoro", "OR": "Oristano", "SS": "Sassari", "SU": "Sud Sardegna",
+    "CA": "Cagliari", "NU": "Nuoro", "OR": "Oristano", "SS": "Sassari",
     "AG": "Agrigento", "CL": "Caltanissetta", "CT": "Catania", "EN": "Enna", "ME": "Messina", 
     "PA": "Palermo", "RG": "Ragusa", "SR": "Siracusa", "TP": "Trapani",
     "AR": "Arezzo", "FI": "Firenze", "GR": "Grosseto", "LI": "Livorno", "LU": "Lucca", 
