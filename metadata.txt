@@ -22,7 +22,7 @@ repository=https://github.com/pigreco/CatastoIT_GML_Merger_Pro
 # Recommended items:
 
 hasProcessingProvider=no
-changelog= v 1.0.4 Fix provincia Sardegna: i 107 comuni della provincia SU (Sud Sardegna) sono stati riaccorpati nella provincia CA (Cagliari, ora 124 comuni) in comuni.py e regions.py; rimossa la voce SU dal selettore provincia
+changelog= v 1.0.4 Fix provincia Sardegna: i 107 comuni della provincia SU (Sud Sardegna) sono stati riaccorpati nella provincia CA (Cagliari, ora 124 comuni) in comuni.py e regions.py; rimossa la voce SU dal selettore provincia. Fix provincia Marche: i 40 comuni della provincia FM (Fermo) sono stati accorpati in AP (Ascoli Piceno, ora 73 comuni) come nello ZIP AdE, rimossa la voce FM dal selettore; i comuni di Pesaro e Urbino usano ora la sigla PS (come lo ZIP AdE) invece di PU, che lasciava vuota la lista comuni
 	v 1.0.3 Fix Bandit B110/B112 (try/except/pass e try/except/continue) segnalati dal repository ufficiale QGIS: aggiunti commenti nosec con giustificazione sulle 12 righe interessate (pulizia layer/directory temporanea, disconnessione segnali, ALTER TABLE, titolo versione) — sblocco stato Blocked
 	v 1.0.2 Fix province Sardegna ed Emilia-Romagna: aggiunta provincia SU (Sud Sardegna, mancante dalla GUI dal 2016) e corretta sigla Forlì-Cesena in regions.py (era erroneamente FO, ora FC come da targa/ISTAT) — issue #50, #51
 	v 1.0.1 Release stabile per il repository ufficiale QGIS: consolida il port Qt6/PyQt6 (QGIS 4) e le fix di sicurezza Bandit (B310 urlopen, B608 SQL interne) già introdotte in 0.9.3/0.9.5 — sblocco stato Blocked
